@@ -1,0 +1,5 @@
+-- Applied to Supabase project "purpledinos" (ca-central-1) on 2026-11-26 via migration "core_schema".
+-- Tables: seasons, players, games, player_game_box, team_game_box, play_by_play, lineups,
+-- franchise_leaders, draft_history, schedule, injuries, articles, beat_posts, x_posts, job_runs, fan_grades.
+-- Public read on display tables; play_by_play, x_posts, job_runs, fan_grades are service-role only.
+-- See the Supabase dashboard (Database > Migrations) for the full SQL.
