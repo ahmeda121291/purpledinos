@@ -1,0 +1,5 @@
+nba_api>=1.10
+supabase>=2.0
+requests>=2.32
+feedparser>=6.0
+python-dotenv>=1.0
