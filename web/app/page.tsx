@@ -10,8 +10,8 @@ export default function Home() {
         </h1>
         <p style={{ fontSize: 18, color: "#CFC6DC", margin: 0 }}>Launching soon. Made in the 6ix.</p>
         <p style={{ marginTop: 24 }}>
-          <a href="https://x.com/PurpleDinos" style={{ color: "#C7A6FF", fontWeight: 600 }}>
-            Follow @PurpleDinos
+          <a href="https://x.com/PurpleDinosTO" style={{ color: "#C7A6FF", fontWeight: 600 }}>
+            Follow @PurpleDinosTO
           </a>
         </p>
       </div>
