@@ -148,7 +148,7 @@ export async function tracker(): Promise<Social | null> {
     return {
       caption: `THEN VS NOW 📈 ${r.full_name}'s ${m.label.toLowerCase()}${era ? " (era-adjusted)" : ""} this season: ${fmtMetric(metric, r[key])}. That's #${idx + 1} in Raptors history.${ctx}`,
       data: { metric, era, player: r.full_name, rank: idx + 1 },
-      image: `${SITE}/api/viz?kind=best&bm=${metric}&era=${era ? 1 : 0}&bmin=41`,
+      image: `${SITE}/api/viz?kind=best&bm=${metric}&era=${era ? 1 : 0}&bmin=41&hp=${encodeURIComponent(r.full_name)}&hs=${season}`,
     };
   }
   return null;

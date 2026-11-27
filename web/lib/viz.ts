@@ -111,11 +111,17 @@ export async function getViz(q: URLSearchParams): Promise<any> {
 
   if (kind === "best") {
     const m = q.get("bm") || "ppg", era = q.get("era") === "1";
-    const { data } = await db.rpc("best_seasons", { p_metric: m, p_era: era, p_min_gp: Number(q.get("bmin") || 41), p_limit: 10 });
+    const hp = q.get("hp"), hs = q.get("hs");
+    const { data } = await db.rpc("best_seasons", { p_metric: m, p_era: era, p_min_gp: Number(q.get("bmin") || 41), p_limit: hp ? 20 : 10 });
     const ADJ: Record<string, string> = { ppg: "adj_ppg", rpg: "adj_rpg", apg: "adj_apg", spg: "adj_spg", bpg: "adj_bpg", fg3pg: "adj_fg3pg", ts_pct: "adj_ts" };
     const LBL: Record<string, string> = Object.fromEntries(Object.values(METRIC).map((x) => [x.key, x.short]));
     const key = era && ADJ[m] ? ADJ[m] : m;
-    const rows = ((data as any[]) ?? []).map((r, i) => ({ ...r, rank: i + 1, name: r.full_name, val: r[key] }));
+    let rows = ((data as any[]) ?? []).map((r, i) => ({ ...r, rank: i + 1, name: r.full_name, val: r[key], _hi: hp ? r.full_name === hp && r.season_id === hs : i === 0 }));
+    // Tracker cards: keep the featured season on the card even if it ranks 11-20.
+    const hi = rows.findIndex((r) => r._hi);
+    const top = rows.slice(0, 10);
+    if (hi >= 10) top[9] = rows[hi];
+    rows = top;
     return { kind: "table", title: `Best Raptors seasons: ${METRIC[m]?.label ?? m}`, ctx: era ? "Era-adjusted to today's league · regular season" : "As played · regular season", sort: "val",
       cols: [["rank", "#", "int"], ["name", "Player", "text"], ["season_id", "Season", "raw"], ["gp", "GP", "int"], ["val", LBL[m] ?? m, fmtOf(m)], ["ppg", "PPG", "1"], ["ts_pct", "TS%", "1"]], rows };
   }

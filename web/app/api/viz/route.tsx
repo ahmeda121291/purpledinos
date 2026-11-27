@@ -143,7 +143,7 @@ function Compare({ v }: { v: any }) {
   );
 }
 
-const cell = (k: string, t: string) => (t === "text" ? { flex: 1 } : { width: k === "rank" ? 50 : k === "span" ? 190 : t === "raw" ? 120 : 96 });
+const cell = (k: string, t: string) => (t === "text" ? { flex: 1 } : k === "rank" ? { width: 60, paddingRight: 16 } : { width: k === "span" ? 190 : t === "raw" ? 120 : 96 });
 
 function Machine({ v }: { v: any }) {
   const Head = ({ x, right }: any) => (
@@ -267,11 +267,11 @@ function Table({ v }: { v: any }) {
         ))}
       </div>
       {v.rows.map((r: any, i: number) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", height: 35, borderBottom: "1px solid rgba(243,238,230,.07)", background: (v.highlight ? r.season_id === v.highlight : i === 0) ? "rgba(107,63,212,.22)" : "transparent" }}>
+        <div key={i} style={{ display: "flex", alignItems: "center", height: 35, borderBottom: "1px solid rgba(243,238,230,.07)", background: ("_hi" in r ? r._hi : v.highlight ? r.season_id === v.highlight : i === 0) ? "rgba(107,63,212,.22)" : "transparent" }}>
           {v.cols.map(([k, , t]: any) => (
             <span key={k} style={{ display: "flex", justifyContent: t === "text" ? "flex-start" : "flex-end", ...cell(k, t),
-              ...(t === "text" ? {} : { fontFamily: MONO }), fontSize: t === "text" ? 21 : 20, fontWeight: k === v.sort || (t === "text" && i === 0) ? 800 : t === "text" ? 600 : 400,
-              color: k === v.sort ? GOLD : INK, overflow: "hidden", whiteSpace: "nowrap" }}>{t === "text" || t === "raw" ? String(r[k] ?? "") : f(r[k], t)}</span>
+              ...(t === "text" ? {} : { fontFamily: MONO }), fontSize: t === "text" ? 21 : 20, fontWeight: k === v.sort || (t === "text" && ("_hi" in r ? r._hi : i === 0)) ? 800 : t === "text" ? 600 : 400,
+              ...(k === "rank" ? { color: MUTED } : { color: k === v.sort ? GOLD : INK }), overflow: "hidden", whiteSpace: "nowrap" }}>{t === "text" || t === "raw" ? String(r[k] ?? "") : f(r[k], t)}</span>
           ))}
         </div>
       ))}
