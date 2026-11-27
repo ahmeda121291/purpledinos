@@ -30,7 +30,7 @@ export default async function CardPage({ params }: P) {
   const card = await getCard(t).catch(() => null);
   return (
     <div style={{ overflow: "hidden" }}>
-      <Header active="home" />
+      <Header active="none" />
       <main className="wrap" style={{ paddingTop: 64, display: "flex", flexDirection: "column", gap: 24, alignItems: "flex-start" }}>
         <span className="k gold">{CARD_META[t].name}</span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
