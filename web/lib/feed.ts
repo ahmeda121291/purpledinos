@@ -200,7 +200,8 @@ export async function refreshAndScore(db: any, mode: FeedMode = "offday") {
     for (const p of (body.data as any[]) ?? []) await db.from("feed_posts").update({ metrics: p.public_metrics, metrics_at: ts }).eq("id", p.id);
     // Deleted posts come back as errors: drop them from the feed.
     const gone = ((body.errors as any[]) ?? []).map((e) => e.resource_id ?? e.value).filter(Boolean);
-    if (gone.length) await db.from("feed_posts").delete().in("id", gone);
+    // Hide rather than delete, so the record of who we reposted (and when) is kept.
+    if (gone.length) await db.from("feed_posts").update({ hidden: true }).in("id", gone);
     await log(db, "feed_refresh", ids.length, 0);
     out.push(`refreshed ${ids.length}, removed ${gone.length}`);
   }
@@ -252,7 +253,9 @@ export async function maybeRepost(db: any, mode: FeedMode = "offday") {
     .eq("raptors", true).eq("hidden", false).is("reposted_at", null)
     .gte("created_at", new Date(Date.now() - (mode === "live" || mode === "postgame" ? 3 : 12) * 3600000).toISOString())
     .order("score", { ascending: false }).limit(20);
-  const used = new Set(done.map((d) => d.author_id));
+  // Never the same writer twice within 24 hours (rolling, not by calendar day).
+  const { data: recentReposts } = await db.from("feed_posts").select("author_id").gte("reposted_at", new Date(Date.now() - 24 * 3600000).toISOString());
+  const used = new Set(((recentReposts as any[]) ?? []).map((d) => d.author_id));
   // During games, clips and photos get a boost: they're what people want mid-game.
   const live = mode === "live" || mode === "postgame";
   const ranked = ((cands as any[]) ?? []).map((c) => ({ ...c, s: Number(c.score) * (live && c.media?.length ? 1.3 : 1) })).sort((a, b) => b.s - a.s);
