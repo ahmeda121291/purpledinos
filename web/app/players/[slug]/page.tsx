@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Header, Footer, X_URL } from "@/components/Chrome";
 import { GradeBadge } from "@/components/GradeBoard";
+import Tip from "@/components/Tip";
 import { fmt } from "@/lib/data";
 import { getAllPlayers, getPlayerBySlug, getPlayerProfile } from "@/lib/players";
 import { teamName } from "@/lib/teams";
@@ -14,6 +15,7 @@ export async function generateStaticParams() {
   return (await getAllPlayers()).sort((a, b) => b.gp - a.gp).slice(0, 40).map((p) => ({ slug: p.slug }));
 }
 
+const TIP: Record<string, string> = { "TS%": "ts", "USG%": "usg", "Avg GmSc": "gmsc", "Best GmSc": "gmsc" };
 const CAT_LABEL: Record<string, string> = { points: "Points", rebounds: "Rebounds", assists: "Assists", steals: "Steals", blocks: "Blocks", threes: "Threes", games: "Games" };
 const years = (p: any) => {
   const a = String(p.first_season ?? "").slice(0, 4), b = p.last_season ? String(Number(String(p.last_season).slice(0, 4)) + 1) : "";
@@ -62,7 +64,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
           <div className="stat-strip" style={{ marginTop: 36 }}>
             {stats.map(([k, v]) => (
               <div key={k} className="glass lift" style={{ padding: "18px 20px", borderRadius: 20 }}>
-                <div className="k muted" style={{ fontSize: 10 }}>{k}</div>
+                <div className="k muted" style={{ fontSize: 10 }}>{k}{TIP[k] ? <Tip term={TIP[k]} /> : null}</div>
                 <div className="mono" style={{ fontSize: 30, fontWeight: 700, marginTop: 4, color: k === "PPG" ? "var(--gold)" : "var(--ink)" }}>{v}</div>
               </div>
             ))}
@@ -79,7 +81,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
             <div className="glass" style={{ padding: "28px 30px", display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
               <GradeBadge g={career.season_lab} kind="lab" size={84} />
               <div style={{ flex: "1 1 300px" }}>
-                <div className="k" style={{ color: "#B9A4F0", marginBottom: 6 }}>Lab report card · this season</div>
+                <div className="k" style={{ color: "#B9A4F0", marginBottom: 6 }}>Lab report card · this season<Tip term="lab" /></div>
                 <p style={{ margin: 0, fontSize: 18 }}>Averaging a <b>{career.season_lab}</b> from the Lab across <b>{career.season_games}</b> games. Grades come from Game Score, nudged by plus-minus.</p>
               </div>
               <Link className="btn btn-o" href="/grades">Grade the last game →</Link>
@@ -108,7 +110,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
             <div className="sechead"><h2 className="h2">Last <span className="se" style={{ fontSize: "1.1em" }}>10 games</span></h2><span className="k muted">With Lab and fan grades</span></div>
             <div className="glass scroll" style={{ padding: "8px 22px" }}>
               <table className="t">
-                <thead><tr><th>Game</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>FG</th><th>TS%</th><th>+/-</th><th>GmSc</th><th>Lab</th><th>Fans</th></tr></thead>
+                <thead><tr><th>Game</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>FG</th><th>TS%<Tip term="ts" /></th><th>+/-<Tip term="pm" /></th><th>GmSc<Tip term="gmsc" /></th><th>Lab<Tip term="lab" /></th><th>Fans<Tip term="fan" /></th></tr></thead>
                 <tbody>
                   {recent.map((g: any) => (
                     <tr key={g.game_id}>
@@ -146,7 +148,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
             <div className="sechead"><h2 className="h2">{title}</h2><span className="k muted">Per game</span></div>
             <div className="glass scroll" style={{ padding: "8px 22px" }}>
               <table className="t">
-                <thead><tr><th>Season</th><th>GP</th><th>MPG</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>FG%</th><th>3P%</th><th>TS%</th><th>USG%</th><th>GmSc</th><th>+/-</th></tr></thead>
+                <thead><tr><th>Season</th><th>GP</th><th>MPG</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>FG%</th><th>3P%</th><th>TS%<Tip term="ts" /></th><th>USG%<Tip term="usg" /></th><th>GmSc<Tip term="gmsc" /></th><th>+/-<Tip term="pm" /></th></tr></thead>
                 <tbody>
                   {rows.map((s: any) => (
                     <tr key={s.season_id + s.season_type}>

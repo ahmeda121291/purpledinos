@@ -8,7 +8,7 @@ const day = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-CA"
 
 export default function GradesView({ g, history, latestId }: { g: any; history: any[]; latestId: string }) {
   const game = g.game;
-  const open = game.game_id === latestId && Date.now() - Date.parse(game.game_date + "T12:00:00Z") < 3 * 86400000;
+  const open = game.game_id === latestId;
   const shareText = `Grading the Raptors ${game.is_home ? "vs" : "at"} ${teamName(game.opponent_abbr)} on @PurpleDinosTO 🦖 What did you give them?`;
   const shareUrl = `https://purpledinos.ca/grades/${game.game_id}`;
   return (
@@ -25,6 +25,19 @@ export default function GradesView({ g, history, latestId }: { g: any; history: 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "20px 0 36px" }}>
           <a className="btn btn-g" href={`https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}>Share your grades on X</a>
           <a className="btn btn-o" href={X_URL}>Follow @PurpleDinosTO</a>
+        </div>
+        <div className="glass" style={{ padding: "18px 22px", marginBottom: 28, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", borderColor: open ? "rgba(217,184,120,.5)" : undefined }}>
+          {open ? (
+            <>
+              <span className="gb gb-fan" style={{ width: 44, height: 36, fontSize: 18 }}>B+</span>
+              <p style={{ margin: 0, flex: "1 1 280px", fontSize: 16 }}><b>Voting is open.</b> Tap a grade in the <b className="gold">Your grade</b> row under each player. You can change it until the next game. Your grade averages into the <b className="gold">Fans</b> grade next to the Lab&apos;s.</p>
+            </>
+          ) : (
+            <>
+              <p style={{ margin: 0, flex: "1 1 280px", fontSize: 16 }}><b>Voting for this game is closed.</b> Grading is open for the most recent game.</p>
+              <Link className="btn btn-g" href="/grades">Grade the latest game →</Link>
+            </>
+          )}
         </div>
         <div className="grades-layout">
           <div style={{ minWidth: 0 }}>

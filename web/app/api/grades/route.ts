@@ -7,7 +7,6 @@ export const dynamic = "force-dynamic";
 const GRADES = ["A+", "A", "B+", "B", "C+", "C", "D", "F"];
 const SALT = "pd-grades-v1";
 const hash = (s: string) => crypto.createHash("sha256").update(SALT + s).digest("hex").slice(0, 40);
-const VOTE_WINDOW_MS = 3 * 86400000;
 
 export async function POST(req: Request) {
   const body: any = await req.json().catch(() => ({}));
@@ -16,7 +15,8 @@ export async function POST(req: Request) {
 
   const db = admin();
   const { data: latest } = await db.from("games").select("game_id, game_date").order("game_date", { ascending: false }).limit(1).maybeSingle();
-  if (!latest || latest.game_id !== game_id || Date.now() - Date.parse(latest.game_date + "T12:00:00Z") > VOTE_WINDOW_MS)
+  // The latest game stays open until the next one is in the books.
+  if (!latest || latest.game_id !== game_id)
     return NextResponse.json({ error: "Voting is closed for this game" }, { status: 409 });
 
   const { data: played } = await db.from("v_player_games").select("player_id").eq("game_id", game_id).eq("player_id", player_id).gt("minutes", 0).maybeSingle();

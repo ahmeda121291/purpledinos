@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Header, Footer } from "@/components/Chrome";
 import StatsExplorer from "@/components/StatsExplorer";
+import Tip from "@/components/Tip";
 import { db } from "@/lib/supabase";
 import { fmt, getCurrentSeason, getSeasonPulse } from "@/lib/data";
 
@@ -37,7 +38,7 @@ export default async function StatsLab() {
           <div className="sechead"><h2 className="h2">Team <span className="se" style={{ fontSize: "1.1em" }}>pulse</span></h2><span className="k muted">Per 100 possessions · regular season</span></div>
           <div className="glass scroll" style={{ padding: "8px 22px" }}>
             <table className="t">
-              <thead><tr><th>Span</th><th>Record</th><th>Off rtg</th><th>Def rtg</th><th>Net</th><th>TS%</th><th>TOV%</th><th>3PA rate</th></tr></thead>
+              <thead><tr><th>Span</th><th>Record</th><th>Off rtg<Tip term="ortg" /></th><th>Def rtg<Tip term="drtg" /></th><th>Net<Tip term="net" /></th><th>TS%<Tip term="ts" /></th><th>TOV%<Tip term="tov" /></th><th>3PA rate<Tip term="par3" /></th></tr></thead>
               <tbody>
                 {[["Season", sp], ["Last 10", l10]].map(([label, r]: any) => (
                   <tr key={label}>

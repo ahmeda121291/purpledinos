@@ -8,6 +8,7 @@ import { teamName } from "@/lib/teams";
 import { playerHref } from "@/lib/slug";
 import { getLatestGrades } from "@/lib/cards";
 import { GradeBadge } from "@/components/GradeBoard";
+import Tip from "@/components/Tip";
 
 export const revalidate = 600;
 
@@ -168,7 +169,7 @@ export default async function Home() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}><span className="muted" style={{ fontWeight: 700 }}>{last.game.opponent_abbr}</span><span className="mono" style={{ fontSize: 52, lineHeight: 1.1 }}>{last.game.opp_pts}</span></div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", borderTop: "1px solid rgba(243,238,230,.12)" }}>
-                <div className="k muted" style={{ display: "flex", justifyContent: "space-between", padding: "12px 8px 6px", fontSize: 11 }}><span>Top 3 by Game Score</span><span>GmSc</span></div>
+                <div className="k muted" style={{ display: "flex", justifyContent: "space-between", padding: "12px 8px 6px", fontSize: 11 }}><span>Top 3 by Game Score<Tip term="gmsc" /></span><span>GmSc</span></div>
                 {last.top.map((p: any, i: number) => (
                   <div key={p.full_name} className="row" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px" }}>
                     <span className="se" style={{ fontSize: 24, width: 22, lineHeight: 1, color: i ? "var(--muted)" : undefined }}>{i + 1}</span>

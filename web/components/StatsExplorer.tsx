@@ -6,15 +6,18 @@ import Link from "next/link";
 import { db } from "@/lib/supabase";
 import { playerHref } from "@/lib/slug";
 import { track } from "./Analytics";
+import Tip from "./Tip";
+import ChartStudio, { ShareActions, vizQuery } from "./ChartStudio";
 
 type Season = { season_id: string; has_lineups: boolean };
-type Col = { key: string; label: string; fmt?: "1" | "int" | "signed"; title?: string };
+type Col = { key: string; label: string; fmt?: "1" | "int" | "signed"; title?: string; tip?: string };
 
 const TABS = [
   { id: "players", label: "Players" },
   { id: "lineups", label: "Lineups" },
   { id: "leaders", label: "All-time leaders" },
   { id: "compare", label: "Compare" },
+  { id: "chart", label: "Chart it ✦" },
 ];
 
 const f1 = (v: any) => (v === null || v === undefined || Number.isNaN(Number(v)) ? "—" : Number(v).toFixed(1));
@@ -32,7 +35,7 @@ function useParams() {
     for (const [k, v] of Object.entries(patch)) (v === null || v === "" ? next.delete(k) : next.set(k, v));
     router.replace(`${path}?${next.toString()}#explorer`, { scroll: false });
   };
-  return { get, set };
+  return { get, set, sp };
 }
 
 function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
@@ -46,10 +49,10 @@ function Select({ label, value, onChange, options }: { label: string; value: str
   );
 }
 
-function Pills({ value, onChange, options, label }: { value: string; onChange: (v: string) => void; options: [string, string][]; label: string }) {
+function Pills({ value, onChange, options, label, tip }: { value: string; onChange: (v: string) => void; options: [string, string][]; label: string; tip?: string }) {
   return (
     <div className="ctl">
-      <span className="k muted">{label}</span>
+      <span className="k muted">{label}{tip ? <Tip term={tip} /> : null}</span>
       <div className="pills" role="group" aria-label={label}>
         {options.map(([v, l]) => (
           <button key={v} type="button" className={v === value ? "pill on" : "pill"} aria-pressed={v === value} onClick={() => onChange(v)}>{l}</button>
@@ -70,6 +73,7 @@ function SortTable({ cols, rows, sort, dir, onSort, highlight }: { cols: Col[]; 
                 <button type="button" className="th-btn" onClick={() => onSort(c.key)} style={{ color: sort === c.key ? "var(--gold)" : undefined }}>
                   {c.label}{sort === c.key ? (dir === "asc" ? " ↑" : " ↓") : ""}
                 </button>
+                {c.tip ? <Tip term={c.tip} /> : null}
               </th>
             ))}
           </tr>
@@ -136,8 +140,8 @@ function Players({ seasons, p }: { seasons: Season[]; p: ReturnType<typeof usePa
     { key: "full_name", label: "Player" }, { key: "gp", label: "GP", fmt: "int" }, { key: "mpg", label: mode === "tot" ? "MIN" : "MPG", fmt: n },
     { key: "ppg", label: "PTS", fmt: n }, { key: "rpg", label: "REB", fmt: n }, { key: "apg", label: "AST", fmt: n }, { key: "spg", label: "STL", fmt: n },
     { key: "bpg", label: "BLK", fmt: n }, { key: "tpg", label: "TOV", fmt: n }, { key: "fg_pct", label: "FG%", fmt: "1" }, { key: "fg3_pct", label: "3P%", fmt: "1" },
-    { key: "ft_pct", label: "FT%", fmt: "1" }, { key: "ts_pct", label: "TS%", fmt: "1", title: "True shooting" }, { key: "usg_pct", label: "USG%", fmt: "1", title: "Usage rate" },
-    { key: "pm", label: "+/-", fmt: "signed" }, { key: "gmsc", label: "GmSc", fmt: "1", title: "Game Score per game" },
+    { key: "ft_pct", label: "FT%", fmt: "1" }, { key: "ts_pct", label: "TS%", fmt: "1", tip: "ts" }, { key: "usg_pct", label: "USG%", fmt: "1", tip: "usg" },
+    { key: "pm", label: "+/-", fmt: "signed", tip: "pm" }, { key: "gmsc", label: "GmSc", fmt: "1", tip: "gmsc" },
   ];
   const onSort = (k: string) => p.set({ sort: k, dir: sort === k && dir === "desc" ? "asc" : "desc" });
 
@@ -147,7 +151,7 @@ function Players({ seasons, p }: { seasons: Season[]; p: ReturnType<typeof usePa
         <Select label="Season" value={season} onChange={(v) => p.set({ season: v })} options={seasons.map((s) => [s.season_id, s.season_id])} />
         <Pills label="Games" value={type} onChange={(v) => p.set({ type: v })} options={[["Regular Season", "Regular season"], ["Playoffs", "Playoffs"]]} />
         <Select label="Split" value={split} onChange={(v) => p.set({ split: v })} options={[["all", "All games"], ["last5", "Last 5"], ["last10", "Last 10"], ["home", "Home"], ["away", "Road"], ["wins", "Wins"], ["losses", "Losses"]]} />
-        <Pills label="View" value={mode} onChange={(v) => p.set({ mode: v })} options={[["pg", "Per game"], ["p36", "Per 36"], ["tot", "Totals"]]} />
+        <Pills label="View" tip="per36" value={mode} onChange={(v) => p.set({ mode: v })} options={[["pg", "Per game"], ["p36", "Per 36"], ["tot", "Totals"]]} />
         <Select label="Min games" value={mingp} onChange={(v) => p.set({ mingp: v })} options={[["1", "1+"], ["3", "3+"], ["5", "5+"], ["10", "10+"], ["20", "20+"], ["41", "41+"]]} />
       </div>
       <p className="k muted" style={{ margin: "0 0 12px", fontSize: 11 }}>{loading ? "Loading…" : `${sorted.length} players · tap a column to sort`}</p>
@@ -187,8 +191,8 @@ function Lineups({ seasons, p }: { seasons: Season[]; p: ReturnType<typeof usePa
   }, [rows, q]);
   const sorted = useSorted(filtered, sort, dir).slice(0, 60);
   const cols: Col[] = [
-    { key: "name", label: "Unit" }, { key: "minutes", label: "Min", fmt: "int" }, { key: "possessions", label: "Poss", fmt: "int" },
-    { key: "off_rtg", label: "Off rtg", fmt: "1" }, { key: "def_rtg", label: "Def rtg", fmt: "1" }, { key: "net_rtg", label: "Net", fmt: "signed" },
+    { key: "name", label: "Unit" }, { key: "minutes", label: "Min", fmt: "int" }, { key: "possessions", label: "Poss", fmt: "int", tip: "poss" },
+    { key: "off_rtg", label: "Off rtg", fmt: "1", tip: "ortg" }, { key: "def_rtg", label: "Def rtg", fmt: "1", tip: "drtg" }, { key: "net_rtg", label: "Net", fmt: "signed", tip: "net" },
   ];
   const onSort = (k: string) => p.set({ lsort: k, ldir: sort === k && dir === "desc" ? "asc" : "desc" });
 
@@ -255,7 +259,7 @@ function Compare({ p }: { p: ReturnType<typeof useParams> }) {
     return () => { off = true; };
   }, [key, n]);
   const setSlot = (i: number, v: string) => { const next = [...picked]; if (v) next[i] = v; else next.splice(i, 1); p.set({ players: [...new Set(next)].join(",") }); };
-  const cols: Col[] = [{ key: "full_name", label: "Player" }, { key: "gp", label: "Games", fmt: "int" }, { key: "ppg", label: "PPG", fmt: "1" }, { key: "rpg", label: "RPG", fmt: "1" }, { key: "apg", label: "APG", fmt: "1" }, { key: "ts_pct", label: "TS%", fmt: "1" }];
+  const cols: Col[] = [{ key: "full_name", label: "Player" }, { key: "gp", label: "Games", fmt: "int" }, { key: "ppg", label: "PPG", fmt: "1" }, { key: "rpg", label: "RPG", fmt: "1" }, { key: "apg", label: "APG", fmt: "1" }, { key: "ts_pct", label: "TS%", fmt: "1", tip: "ts" }];
   const sorted = useSorted(rows, "ppg", "desc");
   return (
     <>
@@ -271,9 +275,18 @@ function Compare({ p }: { p: ReturnType<typeof useParams> }) {
   );
 }
 
+const METRIC_KEYS = ["ppg", "rpg", "apg", "spg", "bpg", "mpg", "ts_pct", "usg_pct", "fg3_pct", "gmsc", "pm"];
+
 export default function StatsExplorer({ seasons }: { seasons: Season[] }) {
   const p = useParams();
   const tab = p.get("tab", "players");
+  const chartThis = () => {
+    if (tab === "players") { const m = p.get("sort", "ppg"); p.set({ tab: "chart", kind: "bar", metric: METRIC_KEYS.includes(m) ? m : "ppg" }); }
+    else if (tab === "leaders") p.set({ tab: "chart", kind: "bar", src: "leaders" });
+    else if (tab === "compare") p.set({ tab: "chart", kind: "compare" });
+    else p.set({ tab: "chart", kind: "quadrant" });
+    track("viz_chart_this", { from: tab });
+  };
   const [copied, setCopied] = useState(false);
   const share = async () => {
     try { await navigator.clipboard.writeText(window.location.href); track("explorer_link_copied", { tab }); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* ignore */ }
@@ -288,6 +301,14 @@ export default function StatsExplorer({ seasons }: { seasons: Season[] }) {
         </div>
         <button type="button" className="btn btn-o" style={{ minHeight: 44, padding: "0 18px", fontSize: 14 }} onClick={share}>{copied ? "Link copied" : "Copy link to this view"}</button>
       </div>
+      {tab !== "chart" ? (
+        <div className="sharebar">
+          <span className="k muted" style={{ fontSize: 11 }}>Make it shareable</span>
+          <ShareActions qs={vizQuery(new URLSearchParams(p.sp.toString() + `&tab=${tab}`), "table")} label="table" compact />
+          <button type="button" className="btn btn-o sm" onClick={chartThis}>✦ Chart this</button>
+        </div>
+      ) : null}
+      {tab === "chart" ? <ChartStudio p={p} sp={new URLSearchParams(p.sp.toString())} seasons={seasons} /> : null}
       {tab === "players" ? <Players seasons={seasons} p={p} /> : null}
       {tab === "lineups" ? <Lineups seasons={seasons} p={p} /> : null}
       {tab === "leaders" ? <Leaders p={p} /> : null}

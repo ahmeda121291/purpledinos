@@ -1,0 +1,15 @@
+export const GLOSSARY: Record<string, { name: string; text: string }> = {
+  gmsc: { name: "Game Score (GmSc)", text: "John Hollinger's one-number box score: PTS + 0.4·FGM − 0.7·FGA − 0.4·(FTA−FTM) + 0.7·OREB + 0.3·DREB + STL + 0.7·AST + 0.7·BLK − 0.4·PF − TOV. About 10 is an average night, 20+ is great, 30+ is a monster." },
+  ts: { name: "True Shooting % (TS%)", text: "Scoring efficiency that counts threes and free throws properly: PTS ÷ (2 × (FGA + 0.44 × FTA)). League average sits around 57–58%. 60%+ is elite." },
+  usg: { name: "Usage % (USG%)", text: "Share of the team's possessions a player finishes with a shot, free throws or a turnover while he's on the floor. 20% is average, 28%+ is a go-to guy." },
+  pm: { name: "Plus-minus (+/-)", text: "The team's point differential while he was on the court. Noisy game to game, telling over a season." },
+  net: { name: "Net rating", text: "Points scored minus points allowed per 100 possessions. Positive means that group wins its minutes." },
+  ortg: { name: "Offensive rating", text: "Points scored per 100 possessions." },
+  drtg: { name: "Defensive rating", text: "Points allowed per 100 possessions. Lower is better." },
+  poss: { name: "Possessions", text: "How many trips down the floor the group played together. More possessions, more trustworthy numbers." },
+  per36: { name: "Per 36", text: "Every stat scaled to 36 minutes, so bench guys and starters can be compared on the same footing." },
+  lab: { name: "Lab grade", text: "Our grade, pure numbers: Game Score + 0.15 × plus-minus. A+ 24+, A 18+, B+ 14+, B 10.5+, C+ 7.5+, C 4.5+, D 1.5+, F below. Under 8 minutes is INC (incomplete)." },
+  fan: { name: "Fan grade", text: "The average of every fan's grade for that game, on a 4.3 scale (A+ = 4.3, F = 0)." },
+  tov: { name: "Turnover % (TOV%)", text: "Turnovers per 100 plays. Lower is better." },
+  par3: { name: "3PA rate", text: "Share of field goal attempts taken from three." },
+};

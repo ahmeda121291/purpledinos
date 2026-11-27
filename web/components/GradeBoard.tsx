@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { playerHref } from "@/lib/slug";
 import { track } from "./Analytics";
+import Tip from "./Tip";
 
 const GRADES = ["A+", "A", "B+", "B", "C+", "C", "D", "F"];
 const pm = (v: any) => (Number(v) > 0 ? `+${v}` : `${v}`);
@@ -52,7 +53,7 @@ export default function GradeBoard({ gameId, rows: initial, open }: { gameId: st
     <div>
       {open ? (
         <div className="k muted" style={{ marginBottom: 16, fontSize: 11 }} aria-live="polite">
-          {done ? <><span className="gold">{done}/{total}</span> graded · change any grade until voting closes</> : "Tap a grade for each player. The Lab's grade is on the left."}
+          {done ? <><span className="gold">{done}/{total}</span> graded · change any grade until voting closes</> : "Tap a grade under each player. Lab = the numbers. Fans = everyone's average. You = yours."}
           {msg ? <span style={{ color: "#E5484D", marginLeft: 10 }}>{msg}</span> : null}
         </div>
       ) : null}
@@ -69,17 +70,23 @@ export default function GradeBoard({ gameId, rows: initial, open }: { gameId: st
                   <div className="mono muted" style={{ fontSize: 13, marginTop: 4 }}>
                     {Math.round(Number(r.minutes))} MIN · <b className="ink">{r.pts}</b> PTS · {r.reb} REB · {r.ast} AST · {r.fgm}/{r.fga} FG · {pm(r.plus_minus)}
                   </div>
-                  <div className="mono muted" style={{ fontSize: 12, marginTop: 2 }}>Game Score {r.game_score} · TS {r.ts_pct ?? "—"}%</div>
+                  <div className="mono muted" style={{ fontSize: 12, marginTop: 2 }}>Game Score {r.game_score}<Tip term="gmsc" /> · TS {r.ts_pct ?? "—"}%<Tip term="ts" /></div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                     <GradeBadge g={inc ? "INC" : r.lab} kind="lab" size={50} />
-                    <span className="k" style={{ fontSize: 10, color: "#B9A4F0" }}>Lab</span>
+                    <span className="k" style={{ fontSize: 10, color: "#B9A4F0" }}>Lab<Tip term="lab" /></span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                     <GradeBadge g={r.fan} kind="fan" size={50} />
-                    <span className="k gold" style={{ fontSize: 10 }}>Fans{Number(r.votes) ? ` · ${r.votes}` : ""}</span>
+                    <span className="k gold" style={{ fontSize: 10 }}>Fans{Number(r.votes) ? ` · ${r.votes}` : ""}<Tip term="fan" /></span>
                   </div>
+                  {open && !inc ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                      <span className={`gb ${mine[id] ? "gb-you" : "gb-empty"}`} style={{ width: 50, height: 41, fontSize: 21 }}>{mine[id] ?? "?"}</span>
+                      <span className="k" style={{ fontSize: 10, color: "var(--ink)" }}>You</span>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               {Math.abs(diff) >= 2 ? (
@@ -88,12 +95,15 @@ export default function GradeBoard({ gameId, rows: initial, open }: { gameId: st
                 </p>
               ) : null}
               {open && !inc ? (
-                <div className="pills" role="group" aria-label={`Your grade for ${r.full_name}`} style={{ marginTop: 14 }}>
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(243,238,230,.1)", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <span className="k gold" style={{ fontSize: 11 }}>Your grade</span>
+                <div className="pills" role="group" aria-label={`Your grade for ${r.full_name}`}>
                   {GRADES.map((g) => (
                     <button key={g} type="button" disabled={busy === `${id}`} className={mine[id] === g ? "pill on" : "pill"} aria-pressed={mine[id] === g} onClick={() => vote(id, g)} style={{ minWidth: 48, padding: "0 12px", fontWeight: 700 }}>
                       {g}
                     </button>
                   ))}
+                </div>
                 </div>
               ) : null}
             </article>
