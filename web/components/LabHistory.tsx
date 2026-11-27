@@ -218,7 +218,7 @@ export function BestSeasons({ p, current }: { p: P; current: string }) {
       <p className="k muted" style={{ fontSize: 11, margin: "0 0 12px" }}>Regular season · the current season counts once a player has played 60% of the team&apos;s games</p>
       <div className="glass scroll" style={{ padding: "8px 22px" }}>
         <table className="t">
-          <thead><tr><th>#</th><th style={{ textAlign: "left" }}>Player</th><th>Season</th><th>Age</th><th>GP</th><th>{label}{era && ADJ[m] ? " (adj)" : ""}</th>{era && ADJ[m] ? <th>As played</th> : null}<th>PPG</th><th>RPG</th><th>APG</th><th>TS%<Tip term="ts" /></th></tr></thead>
+          <thead><tr><th>#</th><th style={{ textAlign: "left" }}>Player</th><th>Season</th><th>Age</th><th>GP</th><th>{label}{era && ADJ[m] ? " (adj)" : ""}</th>{era && ADJ[m] ? <th>As played</th> : null}{m !== "ppg" ? <th>PPG</th> : null}<th>RPG</th><th>APG</th><th>TS%<Tip term="ts" /></th></tr></thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.player_id + r.season_id} className={r.season_id === current ? "live-row" : undefined}>
@@ -227,7 +227,7 @@ export function BestSeasons({ p, current }: { p: P; current: string }) {
                 <td>{r.season_id}</td><td>{r.age ? Math.round(Number(r.age)) : "—"}</td><td>{r.gp}</td>
                 <td className="sorted">{m === "pm" || m === "rel_ts" ? sg(r[key]) : n1(r[key])}</td>
                 {era && ADJ[m] ? <td>{n1(r[m])}</td> : null}
-                <td>{n1(r.ppg)}</td><td>{n1(r.rpg)}</td><td>{n1(r.apg)}</td><td>{n1(r.ts_pct)}</td>
+                {m !== "ppg" ? <td>{n1(r.ppg)}</td> : null}<td>{n1(r.rpg)}</td><td>{n1(r.apg)}</td><td>{n1(r.ts_pct)}</td>
               </tr>
             ))}
           </tbody>
