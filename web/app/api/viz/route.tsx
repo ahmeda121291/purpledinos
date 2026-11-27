@@ -153,7 +153,7 @@ function Table({ v }: { v: any }) {
         ))}
       </div>
       {v.rows.map((r: any, i: number) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", height: 37, borderBottom: "1px solid rgba(243,238,230,.07)", background: i === 0 ? "rgba(107,63,212,.14)" : "transparent" }}>
+        <div key={i} style={{ display: "flex", alignItems: "center", height: 35, borderBottom: "1px solid rgba(243,238,230,.07)", background: i === 0 ? "rgba(107,63,212,.14)" : "transparent" }}>
           {v.cols.map(([k, , t]: any) => (
             <span key={k} style={{ display: "flex", justifyContent: t === "text" ? "flex-start" : "flex-end", ...cell(k, t),
               ...(t === "text" ? {} : { fontFamily: MONO }), fontSize: t === "text" ? 21 : 20, fontWeight: k === v.sort || (t === "text" && i === 0) ? 800 : t === "text" ? 600 : 400,
