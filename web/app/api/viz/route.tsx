@@ -9,6 +9,7 @@ const f = (v: any, t: string = "1") => {
   if (v === null || v === undefined || Number.isNaN(Number(v))) return "—";
   const n = Number(v);
   if (t === "int") return Math.round(n).toLocaleString("en-CA");
+  if (t === "2") return n.toFixed(2);
   if (t === "signed") return (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n).toFixed(1);
   return n.toFixed(1);
 };

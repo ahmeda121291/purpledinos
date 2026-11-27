@@ -6,6 +6,8 @@ import { db } from "@/lib/supabase";
 import { playerHref } from "@/lib/slug";
 import Tip from "./Tip";
 import Jersey from "./Jersey";
+import MetricSelect from "./MetricSelect";
+import { METRIC, ERA_ADJ, fmtMetric } from "@/lib/metrics";
 
 type P = { get: (k: string, d: string) => string; set: (patch: Record<string, string | null>) => void };
 type PS = { player_id: number; full_name: string; season_id: string; gp: number; tgp: number };
@@ -183,9 +185,6 @@ export function TimeMachine({ p, current }: { p: P; current: string }) {
 }
 
 /* ---------------- Best seasons ---------------- */
-const BEST_METRICS: [string, string][] = [["ppg", "Points"], ["rpg", "Rebounds"], ["apg", "Assists"], ["spg", "Steals"], ["bpg", "Blocks"], ["fg3pg", "Threes made"], ["ts_pct", "True shooting %"], ["rel_ts", "TS vs league"], ["usg_pct", "Usage %"], ["gmsc", "Game Score"], ["pts_share", "Share of team points"], ["pm", "Plus-minus"]];
-const ADJ: Record<string, string> = { ppg: "adj_ppg", rpg: "adj_rpg", apg: "adj_apg", spg: "adj_spg", bpg: "adj_bpg", fg3pg: "adj_fg3pg", ts_pct: "adj_ts" };
-
 export function bestQs(p: P) {
   return new URLSearchParams({ kind: "best", bm: p.get("bm", "ppg"), era: p.get("era", "0"), bmin: p.get("bmin", "41") }).toString();
 }
@@ -199,33 +198,34 @@ export function BestSeasons({ p, current }: { p: P; current: string }) {
     db.rpc("best_seasons", { p_metric: m, p_era: era, p_min_gp: Number(min), p_limit: 25 }).then(({ data }) => { if (!off) setRows((data as any[]) ?? []); });
     return () => { off = true; };
   }, [m, era, min]);
+  const ADJ = ERA_ADJ;
   const key = era && ADJ[m] ? ADJ[m] : m;
-  const label = BEST_METRICS.find(([k]) => k === m)?.[1] ?? m;
+  const label = METRIC[m]?.label ?? m;
   const live = rows.findIndex((r) => r.season_id === current);
   return (
     <div>
       <div className="controls">
-        <Sel label="Stat" value={m} onChange={(v) => p.set({ bm: v })} options={BEST_METRICS} />
+        <MetricSelect label="Stat" value={m} onChange={(v) => p.set({ bm: v })} only={(k) => k !== "mpg"} />
         <EraToggle p={p} />
         <Sel label="Min games" value={min} onChange={(v) => p.set({ bmin: v })} options={[["20", "20+"], ["41", "41+"], ["58", "58+"], ["70", "70+"]]} />
       </div>
       {live >= 0 ? (
         <div className="glass" style={{ padding: "16px 20px", marginBottom: 16, borderColor: "rgba(217,184,120,.5)", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
           {jerseys[rows[live].full_name] ? <Jersey name={rows[live].full_name} number={jerseys[rows[live].full_name]} size={48} /> : null}
-          <p style={{ margin: 0, fontSize: 17 }}><span className="dot live" style={{ background: "#E5484D", marginRight: 8 }} /><b>{rows[live].full_name}</b>&apos;s {current} is currently the <b className="gold">#{live + 1}</b> {label.toLowerCase()} season in Raptors history{era ? " (era-adjusted)" : ""}.</p>
+          <p style={{ margin: 0, fontSize: 17 }}><span className="dot live" style={{ background: "#E5484D", marginRight: 8 }} /><b>{rows[live].full_name}</b>&apos;s {current} currently ranks <b className="gold">#{live + 1}</b> in Raptors history for {label.toLowerCase()}{era && ADJ[m] ? " (era-adjusted)" : ""}.</p>
         </div>
       ) : null}
       <p className="k muted" style={{ fontSize: 11, margin: "0 0 12px" }}>Regular season · the current season counts once a player has played 60% of the team&apos;s games</p>
       <div className="glass scroll" style={{ padding: "8px 22px" }}>
         <table className="t">
-          <thead><tr><th>#</th><th style={{ textAlign: "left" }}>Player</th><th>Season</th><th>Age</th><th>GP</th><th>{label}{era && ADJ[m] ? " (adj)" : ""}</th>{era && ADJ[m] ? <th>As played</th> : null}{m !== "ppg" ? <th>PPG</th> : null}<th>RPG</th><th>APG</th><th>TS%<Tip term="ts" /></th></tr></thead>
+          <thead><tr><th>#</th><th style={{ textAlign: "left" }}>Player</th><th>Season</th><th>Age</th><th>GP</th><th>{METRIC[m]?.short ?? label}{era && ADJ[m] ? " (adj)" : ""}{METRIC[m]?.tip ? <Tip term={METRIC[m].tip!} /> : null}</th>{era && ADJ[m] ? <th>As played</th> : null}{m !== "ppg" ? <th>PPG</th> : null}<th>RPG</th><th>APG</th><th>TS%<Tip term="ts" /></th></tr></thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.player_id + r.season_id} className={r.season_id === current ? "live-row" : undefined}>
                 <td>{i + 1}</td>
                 <td style={{ textAlign: "left" }}><Link className="ul" href={playerHref(r.full_name)} style={{ color: "var(--ink)", fontWeight: 600 }}>{r.full_name}</Link>{r.season_id === current ? <span className="k" style={{ fontSize: 10, color: "#E5484D", marginLeft: 8 }}>Live</span> : null}</td>
                 <td>{r.season_id}</td><td>{r.age ? Math.round(Number(r.age)) : "—"}</td><td>{r.gp}</td>
-                <td className="sorted">{m === "pm" || m === "rel_ts" ? sg(r[key]) : n1(r[key])}</td>
+                <td className="sorted">{fmtMetric(m, r[key])}</td>
                 {era && ADJ[m] ? <td>{n1(r[m])}</td> : null}
                 {m !== "ppg" ? <td>{n1(r.ppg)}</td> : null}<td>{n1(r.rpg)}</td><td>{n1(r.apg)}</td><td>{n1(r.ts_pct)}</td>
               </tr>

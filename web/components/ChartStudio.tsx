@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/supabase";
 import { track } from "./Analytics";
 import Tip from "./Tip";
+import MetricSelect from "./MetricSelect";
+import { METRIC } from "@/lib/metrics";
 
 type P = { get: (k: string, d: string) => string; set: (patch: Record<string, string | null>) => void };
 type Season = { season_id: string };
 
-const METRIC_OPTS: [string, string][] = [["ppg", "Points"], ["rpg", "Rebounds"], ["apg", "Assists"], ["spg", "Steals"], ["bpg", "Blocks"], ["mpg", "Minutes"], ["ts_pct", "True shooting %"], ["usg_pct", "Usage %"], ["fg3_pct", "3-point %"], ["gmsc", "Game Score"], ["pm", "Plus-minus"]];
 const KINDS: [string, string, string][] = [["bar", "Leaderboard", "Who leads in any stat"], ["quadrant", "Quadrant", "Two stats, four types of player"], ["line", "Trend", "One player over time"], ["compare", "Head-to-head", "Up to 4 Raptors, same games"]];
 const KEYS: Record<string, string[]> = {
   bar: ["kind", "src", "cat", "metric", "season", "type", "split", "mingp", "mode"],
@@ -86,7 +87,7 @@ export default function ChartStudio({ p, sp, seasons }: { p: P; sp: URLSearchPar
               <Sel label="Category" value={p.get("cat", "pts")} onChange={(v) => p.set({ cat: v })} options={[["pts", "Points"], ["reb", "Rebounds"], ["ast", "Assists"], ["stl", "Steals"], ["blk", "Blocks"], ["fg3m", "Threes"], ["gp", "Games"]]} />
             ) : (
               <>
-                <Sel label="Stat" value={p.get("metric", "ppg")} onChange={(v) => p.set({ metric: v })} options={METRIC_OPTS} />
+                <MetricSelect label="Stat" value={p.get("metric", "ppg")} onChange={(v) => p.set({ metric: v })} only={(k) => k !== "fg3pg" && k !== "rel_ts" && k !== "pts_share"} />
                 <Sel label="View" tip="per36" value={p.get("mode", "pg")} onChange={(v) => p.set({ mode: v })} options={[["pg", "Per game"], ["p36", "Per 36"], ["tot", "Totals"]]} />
                 {common}
               </>
@@ -95,15 +96,15 @@ export default function ChartStudio({ p, sp, seasons }: { p: P; sp: URLSearchPar
         ) : null}
         {kind === "quadrant" ? (
           <>
-            <Sel label="Across (X)" value={p.get("x", "usg_pct")} onChange={(v) => p.set({ x: v })} options={METRIC_OPTS} />
-            <Sel label="Up (Y)" value={p.get("y", "ts_pct")} onChange={(v) => p.set({ y: v })} options={METRIC_OPTS} />
+            <MetricSelect label="Across (X)" value={p.get("x", "usg_pct")} onChange={(v) => p.set({ x: v })} only={(k) => k !== "fg3pg" && k !== "rel_ts" && k !== "pts_share"} />
+            <MetricSelect label="Up (Y)" value={p.get("y", "ts_pct")} onChange={(v) => p.set({ y: v })} only={(k) => k !== "fg3pg" && k !== "rel_ts" && k !== "pts_share"} />
             {common}
           </>
         ) : null}
         {kind === "line" ? (
           <>
             <Sel label="Player" value={p.get("player", "Scottie Barnes")} onChange={(v) => p.set({ player: v })} options={nameOpts.length ? nameOpts : [["Scottie Barnes", "Scottie Barnes"]]} />
-            <Sel label="Stat" value={p.get("metric", "ppg")} onChange={(v) => p.set({ metric: v })} options={METRIC_OPTS.filter(([k]) => k !== "fg3_pct")} />
+            <MetricSelect label="Stat" value={p.get("metric", "ppg")} onChange={(v) => p.set({ metric: v })} only={(k) => p.get("scope", "games") === "seasons" ? true : Boolean(METRIC[k]?.game)} />
             <Sel label="Over" value={p.get("scope", "games")} onChange={(v) => p.set({ scope: v })} options={[["games", "Game by game"], ["seasons", "Season by season"]]} />
             {p.get("scope", "games") === "games" ? <Sel label="Season" value={season} onChange={(v) => p.set({ season: v })} options={seasonOpts} /> : null}
           </>

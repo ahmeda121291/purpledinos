@@ -140,7 +140,7 @@ function Players({ seasons, p }: { seasons: Season[]; p: ReturnType<typeof usePa
     return () => { off = true; };
   }, [season, type, split, mingp]);
 
-  const rows = useMemo(() => raw.map((r) => {
+  const rows = useMemo(() => mode === "adv" ? raw.map((r) => ({ ...r, _key: r.player_id })) : raw.map((r) => {
     const per36 = (v: any) => (r.mpg > 0 ? (Number(v) * 36) / Number(r.mpg) : null);
     const base = { _key: r.player_id, full_name: r.full_name, gp: r.gp, mpg: mode === "tot" ? r.minutes : r.mpg, fg_pct: r.fg_pct, fg3_pct: r.fg3_pct, ft_pct: r.ft_pct, ts_pct: r.ts_pct, usg_pct: r.usg_pct, pm: r.pm, gmsc: r.gmsc };
     if (mode === "tot") return { ...base, ppg: r.pts, rpg: r.reb, apg: r.ast, spg: r.stl, bpg: r.blk, tpg: r.tov };
@@ -149,7 +149,15 @@ function Players({ seasons, p }: { seasons: Season[]; p: ReturnType<typeof usePa
   }), [raw, mode]);
   const sorted = useSorted(rows, sort, dir);
   const n = mode === "tot" ? "int" : "1";
-  const cols: Col[] = [
+  const advCols: Col[] = [
+    { key: "full_name", label: "Player" }, { key: "gp", label: "GP", fmt: "int" }, { key: "mpg", label: "MPG", fmt: "1" },
+    { key: "ts_pct", label: "TS%", fmt: "1", tip: "ts" }, { key: "efg_pct", label: "eFG%", fmt: "1", tip: "efg" }, { key: "par3_pct", label: "3PAr", fmt: "1", tip: "par3" },
+    { key: "ftr", label: "FTr", fmt: "1", tip: "ftr" }, { key: "usg_pct", label: "USG%", fmt: "1", tip: "usg" }, { key: "ast_pct", label: "AST%", fmt: "1", tip: "astpct" },
+    { key: "tov_pct", label: "TOV%", fmt: "1", tip: "tovpct" }, { key: "ast_to", label: "AST/TO", fmt: "1", tip: "astto" }, { key: "oreb_pct", label: "OREB%", fmt: "1", tip: "orebpct" },
+    { key: "reb_share", label: "REB sh.", fmt: "1", tip: "rebshare" }, { key: "pts100", label: "PTS/100", fmt: "1", tip: "per100" }, { key: "stocks36", label: "Stk/36", fmt: "1", tip: "stocks" },
+    { key: "gmsc36", label: "GmSc/36", fmt: "1", tip: "gmsc" }, { key: "lab_gpa", label: "Lab GPA", fmt: "1", tip: "labgpa" },
+  ];
+  const cols: Col[] = mode === "adv" ? advCols : [
     { key: "full_name", label: "Player" }, { key: "gp", label: "GP", fmt: "int" }, { key: "mpg", label: mode === "tot" ? "MIN" : "MPG", fmt: n },
     { key: "ppg", label: "PTS", fmt: n }, { key: "rpg", label: "REB", fmt: n }, { key: "apg", label: "AST", fmt: n }, { key: "spg", label: "STL", fmt: n },
     { key: "bpg", label: "BLK", fmt: n }, { key: "tpg", label: "TOV", fmt: n }, { key: "fg_pct", label: "FG%", fmt: "1" }, { key: "fg3_pct", label: "3P%", fmt: "1" },
@@ -164,7 +172,7 @@ function Players({ seasons, p }: { seasons: Season[]; p: ReturnType<typeof usePa
         <Select label="Season" value={season} onChange={(v) => p.set({ season: v })} options={seasons.map((s) => [s.season_id, s.season_id])} />
         <Pills label="Games" value={type} onChange={(v) => p.set({ type: v })} options={[["Regular Season", "Regular season"], ["Playoffs", "Playoffs"]]} />
         <Select label="Split" value={split} onChange={(v) => p.set({ split: v })} options={[["all", "All games"], ["last5", "Last 5"], ["last10", "Last 10"], ["home", "Home"], ["away", "Road"], ["wins", "Wins"], ["losses", "Losses"]]} />
-        <Pills label="View" tip="per36" value={mode} onChange={(v) => p.set({ mode: v })} options={[["pg", "Per game"], ["p36", "Per 36"], ["tot", "Totals"]]} />
+        <Pills label="View" tip="per36" value={mode} onChange={(v) => p.set({ mode: v })} options={[["pg", "Per game"], ["p36", "Per 36"], ["tot", "Totals"], ["adv", "Advanced"]]} />
         <Select label="Min games" value={mingp} onChange={(v) => p.set({ mingp: v })} options={[["1", "1+"], ["3", "3+"], ["5", "5+"], ["10", "10+"], ["20", "20+"], ["41", "41+"]]} />
       </div>
       <p className="k muted" style={{ margin: "0 0 12px", fontSize: 11 }}>{loading ? "Loading…" : `${sorted.length} players · tap a column to sort`}</p>

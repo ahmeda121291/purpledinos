@@ -1,19 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "./supabase";
 
-export const METRICS: Record<string, { label: string; short: string; game?: string; pct?: boolean; signed?: boolean }> = {
-  ppg: { label: "Points per game", short: "PTS", game: "pts" },
-  rpg: { label: "Rebounds per game", short: "REB", game: "reb" },
-  apg: { label: "Assists per game", short: "AST", game: "ast" },
-  spg: { label: "Steals per game", short: "STL", game: "stl" },
-  bpg: { label: "Blocks per game", short: "BLK", game: "blk" },
-  mpg: { label: "Minutes per game", short: "MIN", game: "minutes" },
-  ts_pct: { label: "True shooting %", short: "TS%", game: "ts_pct", pct: true },
-  usg_pct: { label: "Usage %", short: "USG%", game: "usg_pct", pct: true },
-  fg3_pct: { label: "3-point %", short: "3P%", pct: true },
-  gmsc: { label: "Game Score", short: "GmSc", game: "game_score" },
-  pm: { label: "Plus-minus", short: "+/-", game: "plus_minus", signed: true },
-};
+import { METRIC } from "./metrics";
+export const METRICS = METRIC;
+const isSigned = (k: string) => METRIC[k]?.fmt === "signed";
+const fmtOf = (k: string) => (METRIC[k]?.fmt === "int" ? "int" : METRIC[k]?.fmt === "signed" ? "signed" : METRIC[k]?.fmt === "2" ? "2" : "1");
 export const SPLITS: Record<string, string> = { all: "", last5: "Last 5", last10: "Last 10", home: "Home", away: "Road", wins: "In wins", losses: "In losses" };
 const LEADER_CATS: Record<string, string> = { pts: "Points", reb: "Rebounds", ast: "Assists", stl: "Steals", blk: "Blocks", fg3m: "Threes", gp: "Games" };
 
@@ -33,12 +24,12 @@ async function playerRows(q: URLSearchParams) {
   const { data } = await db.rpc("player_stats", { p_season: season, p_type: type, p_split: split, p_min_gp: mingp || 1 });
   const rows: any[] = ((data as any[]) ?? []).map((r) => {
     const per36 = (v: any) => (r.mpg > 0 ? (Number(v) * 36) / Number(r.mpg) : null);
-    const base = { full_name: r.full_name, gp: r.gp, mpg: mode === "tot" ? r.minutes : r.mpg, fg_pct: r.fg_pct, fg3_pct: r.fg3_pct, ts_pct: r.ts_pct, usg_pct: r.usg_pct, pm: r.pm, gmsc: r.gmsc };
+    const base = { ...r, mpg: mode === "tot" ? r.minutes : r.mpg };
     if (mode === "tot") return { ...base, ppg: r.pts, rpg: r.reb, apg: r.ast, spg: r.stl, bpg: r.blk };
     if (mode === "p36") return { ...base, ppg: per36(r.ppg), rpg: per36(r.rpg), apg: per36(r.apg), spg: per36(r.spg), bpg: per36(r.bpg) };
     return { ...base, ppg: r.ppg, rpg: r.rpg, apg: r.apg, spg: r.spg, bpg: r.bpg };
   });
-  const ctx = [season, type === "Playoffs" ? "Playoffs" : "", SPLITS[split] ?? "", mode === "p36" ? "Per 36" : mode === "tot" ? "Totals" : ""].filter(Boolean).join(" · ");
+  const ctx = [season, type === "Playoffs" ? "Playoffs" : "", SPLITS[split] ?? "", mode === "p36" ? "Per 36" : mode === "tot" ? "Totals" : mode === "adv" ? "Advanced" : ""].filter(Boolean).join(" · ");
   return { rows, ctx, mode };
 }
 
@@ -54,8 +45,10 @@ export async function getViz(q: URLSearchParams): Promise<any> {
     }
     const metric = METRICS[q.get("metric") || ""] ? q.get("metric")! : "ppg";
     const { rows, ctx, mode } = await playerRows(q);
-    const top = rows.filter((r) => r[metric] !== null && r[metric] !== undefined).sort((a, b) => Number(b[metric]) - Number(a[metric])).slice(0, Number(q.get("n") || 10));
-    return { kind, title: `${METRICS[metric].label.replace(" per game", mode === "tot" ? "" : mode === "p36" ? " per 36" : " per game")}`, ctx, rows: top.map((r) => ({ name: r.full_name, value: Number(r[metric]) })), fmt: mode === "tot" && !METRICS[metric].pct ? "int" : METRICS[metric].signed ? "signed" : "1" };
+    const low = Boolean(METRICS[metric].lower);
+    const top = rows.filter((r) => r[metric] !== null && r[metric] !== undefined).sort((a, b) => (low ? 1 : -1) * (Number(a[metric]) - Number(b[metric]))).slice(0, Number(q.get("n") || 10));
+    const counting = ["ppg", "rpg", "apg", "spg", "bpg"].includes(metric);
+    return { kind, title: counting ? METRICS[metric].label.replace(" per game", mode === "tot" ? " (totals)" : mode === "p36" ? " per 36" : " per game") : METRICS[metric].label, ctx, rows: top.map((r) => ({ name: r.full_name, value: Number(r[metric]) })), fmt: mode === "tot" && counting ? "int" : fmtOf(metric) };
   }
 
   if (kind === "quadrant") {
@@ -64,7 +57,7 @@ export async function getViz(q: URLSearchParams): Promise<any> {
     const { rows, ctx } = await playerRows(q);
     const pts = rows.filter((r) => r[x] != null && r[y] != null).map((r) => ({ name: lastName(r.full_name), x: Number(r[x]), y: Number(r[y]) }));
     const med = (a: number[]) => { const s = [...a].sort((m, n) => m - n); return s.length ? s[Math.floor(s.length / 2)] : 0; };
-    const special = x === "usg_pct" && y === "ts_pct";
+    const special = x === "usg_pct" && (y === "ts_pct" || y === "efg_pct");
     return {
       kind, title: `${METRICS[x].short} vs ${METRICS[y].short}`, ctx, pts, x, y, xLabel: METRICS[x].label, yLabel: METRICS[y].label,
       mx: med(pts.map((p) => p.x)), my: med(pts.map((p) => p.y)),
@@ -79,16 +72,17 @@ export async function getViz(q: URLSearchParams): Promise<any> {
     const { data: p } = await db.from("players").select("player_id, full_name").eq("full_name", player).maybeSingle();
     if (!p) return { kind, title: player, ctx: "Player not found", points: [] };
     if (scope === "seasons") {
-      const { data } = await db.rpc("player_seasons", { p_id: (p as any).player_id });
-      const pts = ((data as any[]) ?? []).filter((s) => s.season_type === "Regular Season").reverse().map((s) => ({ label: s.season_id.slice(2), value: Number(s[metric]) })).filter((s) => !Number.isNaN(s.value));
-      return { kind, title: `${player}: ${METRICS[metric].label}`, ctx: "Season by season, regular season", points: pts, fmt: METRICS[metric].signed ? "signed" : "1" };
+      const { data } = await db.from("v_player_seasons").select(`season_id, ${metric}`).eq("player_id", (p as any).player_id).order("season_id");
+      const pts = ((data as any[]) ?? []).map((s) => ({ label: s.season_id.slice(2), value: Number(s[metric]) })).filter((s) => !Number.isNaN(s.value));
+      return { kind, title: `${player}: ${METRICS[metric].label}`, ctx: "Season by season, regular season", points: pts, fmt: fmtOf(metric) };
     }
     const season = q.get("season") || (await currentSeason());
-    const col = METRICS[metric].game ?? "pts";
+    if (!METRICS[metric].game) return { kind, title: `${player}: ${METRICS[metric].label}`, ctx: "Game-by-game only works for box-score stats. Switch to season by season.", points: [] };
+    const col = METRICS[metric].game!;
     const { data } = await db.from("v_player_games").select(`game_date, opponent_abbr, ${col}`).eq("player_id", (p as any).player_id).eq("season_id", season).eq("season_type", "Regular Season").gt("minutes", 0).order("game_date", { ascending: true });
     const raw = ((data as any[]) ?? []).map((g) => ({ label: `${g.game_date.slice(5).replace("-", "/")}`, value: Number(g[col]) * (METRICS[metric].pct ? 100 : 1) }));
     const roll = raw.map((_, i) => { const w = raw.slice(Math.max(0, i - 4), i + 1); return w.reduce((a, b) => a + b.value, 0) / w.length; });
-    return { kind, title: `${player}: ${METRICS[metric].short} game by game`, ctx: `${season} · dots = each game, line = 5-game average`, points: raw.map((r, i) => ({ ...r, avg: roll[i] })), fmt: METRICS[metric].signed ? "signed" : "1" };
+    return { kind, title: `${player}: ${METRICS[metric].short} game by game`, ctx: `${season} · dots = each game, line = 5-game average`, points: raw.map((r, i) => ({ ...r, avg: roll[i] })), fmt: isSigned(metric) ? "signed" : "1" };
   }
 
   if (kind === "compare") {
@@ -119,11 +113,11 @@ export async function getViz(q: URLSearchParams): Promise<any> {
     const m = q.get("bm") || "ppg", era = q.get("era") === "1";
     const { data } = await db.rpc("best_seasons", { p_metric: m, p_era: era, p_min_gp: Number(q.get("bmin") || 41), p_limit: 10 });
     const ADJ: Record<string, string> = { ppg: "adj_ppg", rpg: "adj_rpg", apg: "adj_apg", spg: "adj_spg", bpg: "adj_bpg", fg3pg: "adj_fg3pg", ts_pct: "adj_ts" };
-    const LBL: Record<string, string> = { ppg: "Points", rpg: "Rebounds", apg: "Assists", spg: "Steals", bpg: "Blocks", fg3pg: "Threes", ts_pct: "True shooting", rel_ts: "TS vs league", usg_pct: "Usage", gmsc: "Game Score", pts_share: "Team pts share", pm: "Plus-minus" };
+    const LBL: Record<string, string> = Object.fromEntries(Object.values(METRIC).map((x) => [x.key, x.short]));
     const key = era && ADJ[m] ? ADJ[m] : m;
     const rows = ((data as any[]) ?? []).map((r, i) => ({ ...r, rank: i + 1, name: r.full_name, val: r[key] }));
-    return { kind: "table", title: `Best Raptors seasons: ${LBL[m] ?? m}`, ctx: era ? "Era-adjusted to today's league · regular season" : "As played · regular season", sort: "val",
-      cols: [["rank", "#", "int"], ["name", "Player", "text"], ["season_id", "Season", "raw"], ["gp", "GP", "int"], ["val", LBL[m] ?? m, m === "pm" || m === "rel_ts" ? "signed" : "1"], ["ppg", "PPG", "1"], ["ts_pct", "TS%", "1"]], rows };
+    return { kind: "table", title: `Best Raptors seasons: ${METRIC[m]?.label ?? m}`, ctx: era ? "Era-adjusted to today's league · regular season" : "As played · regular season", sort: "val",
+      cols: [["rank", "#", "int"], ["name", "Player", "text"], ["season_id", "Season", "raw"], ["gp", "GP", "int"], ["val", LBL[m] ?? m, fmtOf(m)], ["ppg", "PPG", "1"], ["ts_pct", "TS%", "1"]], rows };
   }
 
   if (kind === "teams") {
@@ -200,5 +194,10 @@ export async function getViz(q: URLSearchParams): Promise<any> {
   const cols: any[] = [["name", "Player", "text"], ["gp", "GP", "int"], ["mpg", mode === "tot" ? "MIN" : "MPG", n], ["ppg", "PTS", n], ["rpg", "REB", n], ["apg", "AST", n], ["ts_pct", "TS%", "1"], ["usg_pct", "USG%", "1"], ["pm", "+/-", "signed"], ["gmsc", "GmSc", "1"]];
   const extra: Record<string, any> = { spg: ["spg", "STL", n], bpg: ["bpg", "BLK", n], fg_pct: ["fg_pct", "FG%", "1"], fg3_pct: ["fg3_pct", "3P%", "1"] };
   if (extra[sort]) cols.splice(6, 0, extra[sort]);
+  if (mode === "adv") {
+    const adv: any[] = [["name", "Player", "text"], ["gp", "GP", "int"], ["ts_pct", "TS%", "1"], ["efg_pct", "eFG%", "1"], ["usg_pct", "USG%", "1"], ["ast_pct", "AST%", "1"], ["tov_pct", "TOV%", "1"], ["oreb_pct", "OREB%", "1"], ["pts100", "PTS/100", "1"], ["gmsc36", "GmSc/36", "1"]];
+    if (METRIC[sort] && !adv.some((c) => c[0] === sort)) adv.splice(2, 0, [sort, METRIC[sort].short, fmtOf(sort)]);
+    return { kind: "table", title: "Raptors advanced stats", ctx, sort, cols: adv.slice(0, 11), rows: rows.slice(0, 10).map((r: any) => ({ ...r, name: r.full_name })) };
+  }
   return { kind: "table", title: "Raptors player stats", ctx, sort, cols, rows: rows.slice(0, 10).map((r: any) => ({ ...r, name: r.full_name })) };
 }
