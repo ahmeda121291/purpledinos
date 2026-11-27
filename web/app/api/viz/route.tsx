@@ -45,7 +45,7 @@ function Quadrant({ v }: { v: any }) {
   const xs = v.pts.map((p: any) => p.x), ys = v.pts.map((p: any) => p.y);
   const [x0, x1] = [Math.min(...xs), Math.max(...xs)], [y0, y1] = [Math.min(...ys), Math.max(...ys)];
   const px = (x: number) => 30 + ((x - x0) / Math.max(1e-6, x1 - x0)) * (PW - 160);
-  const py = (y: number) => 14 + (1 - (y - y0) / Math.max(1e-6, y1 - y0)) * (PH - 60);
+  const py = (y: number) => 40 + (1 - (y - y0) / Math.max(1e-6, y1 - y0)) * (PH - 100);
   const corner = (t: string, s: any) => <div style={{ position: "absolute", display: "flex", ...s }}><K size={14} color={MUTED}>{t}</K></div>;
   return (
     <div style={{ display: "flex", position: "relative", width: PW, height: PH, borderRadius: 18, border: "1px solid rgba(243,238,230,.12)", background: "rgba(243,238,230,.02)" }}>
@@ -54,7 +54,7 @@ function Quadrant({ v }: { v: any }) {
       {corner(v.corners.tr, { right: 16, top: 12 })}{corner(v.corners.tl, { left: 16, top: 12 })}
       {corner(v.corners.br, { right: 16, bottom: 34 })}{corner(v.corners.bl, { left: 16, bottom: 34 })}
       {v.pts.map((p: any, i: number) => {
-        const top = p.x > v.mx && p.y > v.my;
+        const top = p.x >= v.mx && p.y >= v.my;
         return (
           <div key={p.name + i} style={{ position: "absolute", left: px(p.x) - 7, top: py(p.y) - 7, display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ display: "flex", width: 14, height: 14, borderRadius: 7, background: top ? GOLD : "#9A72F5", border: "2px solid #0A090C" }} />
@@ -142,20 +142,22 @@ function Compare({ v }: { v: any }) {
   );
 }
 
+const cell = (k: string, t: string) => (t === "text" ? { flex: 1 } : { width: k === "rank" ? 50 : 96 });
+
 function Table({ v }: { v: any }) {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", padding: "0 0 8px", borderBottom: "1.5px solid rgba(243,238,230,.18)" }}>
         {v.cols.map(([k, label, t]: any) => (
-          <span key={k} style={{ display: "flex", justifyContent: t === "text" ? "flex-start" : "flex-end", flex: t === "text" ? 1 : undefined, width: t === "text" ? undefined : k === "rank" ? 50 : 96, fontFamily: MONO, fontSize: 15, letterSpacing: 2, color: k === v.sort ? GOLD : MUTED }}>{label.toUpperCase()}</span>
+          <span key={k} style={{ display: "flex", justifyContent: t === "text" ? "flex-start" : "flex-end", ...cell(k, t), fontFamily: MONO, fontSize: 15, letterSpacing: 2, color: k === v.sort ? GOLD : MUTED }}>{label.toUpperCase()}</span>
         ))}
       </div>
       {v.rows.map((r: any, i: number) => (
         <div key={i} style={{ display: "flex", alignItems: "center", height: 37, borderBottom: "1px solid rgba(243,238,230,.07)", background: i === 0 ? "rgba(107,63,212,.14)" : "transparent" }}>
           {v.cols.map(([k, , t]: any) => (
-            <span key={k} style={{ display: "flex", justifyContent: t === "text" ? "flex-start" : "flex-end", flex: t === "text" ? 1 : undefined, width: t === "text" ? undefined : k === "rank" ? 50 : 96,
-              fontFamily: t === "text" ? undefined : MONO, fontSize: t === "text" ? 21 : 20, fontWeight: k === v.sort || (t === "text" && i === 0) ? 800 : t === "text" ? 600 : 400,
-              color: k === v.sort ? GOLD : INK, overflow: "hidden", whiteSpace: "nowrap" }}>{t === "text" ? r[k] : f(r[k], t)}</span>
+            <span key={k} style={{ display: "flex", justifyContent: t === "text" ? "flex-start" : "flex-end", ...cell(k, t),
+              ...(t === "text" ? {} : { fontFamily: MONO }), fontSize: t === "text" ? 21 : 20, fontWeight: k === v.sort || (t === "text" && i === 0) ? 800 : t === "text" ? 600 : 400,
+              color: k === v.sort ? GOLD : INK, overflow: "hidden", whiteSpace: "nowrap" }}>{t === "text" ? String(r[k] ?? "") : f(r[k], t)}</span>
           ))}
         </div>
       ))}
