@@ -63,11 +63,12 @@ export async function xUploadImage(png: ArrayBuffer): Promise<string> {
   throw new Error(`Media upload failed: ${lastErr}`);
 }
 
-export async function xPost(text: string, mediaIds?: string[], replyTo?: string) {
+export async function xPost(text: string, mediaIds?: string[], replyTo?: string, poll?: { options: string[]; minutes: number }) {
   const url = `${API}/2/tweets`;
   const payload: any = { text };
   if (mediaIds?.length) payload.media = { media_ids: mediaIds };
   if (replyTo) payload.reply = { in_reply_to_tweet_id: replyTo };
+  if (poll) payload.poll = { options: poll.options, duration_minutes: poll.minutes };
   const res = await fetch(url, {
     method: "POST",
     headers: { Authorization: oauthHeader("POST", url), "Content-Type": "application/json" },

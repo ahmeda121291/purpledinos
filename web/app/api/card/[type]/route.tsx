@@ -94,6 +94,21 @@ function render(type: CardType, d: any) {
         </Frame>
       );
     }
+    case "trivia":
+      return (
+        <Frame label="Raptors Trivia">
+          <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+            <div style={{ display: "flex", fontSize: 50, fontWeight: 800, lineHeight: 1.08, letterSpacing: -1.5, maxWidth: 1000 }}>{d.q}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+              {d.options.map((o: string, i: number) => (
+                <div key={o} style={{ display: "flex", alignItems: "center", gap: 14, width: 520, padding: "16px 22px", borderRadius: 18, border: "1.5px solid rgba(243,238,230,.18)", background: "rgba(30,26,40,.7)" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 22, color: GOLD }}>{"ABCD"[i]}</span><span style={{ fontSize: 28, fontWeight: 600 }}>{o}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Frame>
+      );
     case "record": {
       const r = d.lead;
       return (
@@ -218,6 +233,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ type: s
   if (!(CARD_TYPES as readonly string[]).includes(type)) return new Response("Not found", { status: 404 });
   const t = type as CardType;
   const card = await getCard(t).catch(() => null);
+  if (card?.image) return Response.redirect(card.image, 302);
   return new ImageResponse(card ? render(t, card.data)! : <Empty type={t} />, {
     width: W,
     height: H,

@@ -11,12 +11,16 @@ const STATUS_COLOR: Record<string, string> = { preview: "#D9B878", posted: "#7BD
 
 export default async function Queue() {
   const db = admin();
-  const [{ data: posts }, { data: mode }, { data: runs }, { data: health }] = await Promise.all([
+  const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+  const [{ data: posts }, { data: mode }, { data: runs }, { data: health }, { data: spendRows }, { data: cap }] = await Promise.all([
     db.from("x_posts").select("*").order("created_at", { ascending: false }).limit(40),
     db.from("app_settings").select("value").eq("key", "posting_mode").maybeSingle(),
     db.from("job_runs").select("job, status, started_at, detail").eq("job", "poster").order("started_at", { ascending: false }).limit(1),
     db.from("job_runs").select("job, status, started_at, detail").gte("started_at", new Date(Date.now() - 2 * 86400000).toISOString()).order("started_at", { ascending: false }).limit(300),
+    db.from("x_posts").select("cost").gte("posted_at", monthStart.toISOString()),
+    db.from("app_settings").select("value").eq("key", "x_budget_month").maybeSingle(),
   ]);
+  const spent = ((spendRows as any[]) ?? []).reduce((a, r) => a + Number(r.cost ?? 0), 0);
   const h = (health as any[]) ?? [];
   const lastOk = (job: string) => h.find((r) => r.job === job && r.status === "ok")?.started_at as string | undefined;
   const errors = h.filter((r) => r.status !== "ok" && r.status !== "running" && Date.now() - Date.parse(r.started_at) < 86400000);
@@ -27,6 +31,7 @@ export default async function Queue() {
     { name: "Poster", ok: Boolean(lastOk("poster")) && Date.now() - Date.parse(lastOk("poster")!) < 3600000, note: `last success ${ago(lastOk("poster"))}` },
     { name: "Errors (24h)", ok: errors.length === 0, note: errors.length ? `${errors.length}: ${String(errors[0].detail ?? "").slice(0, 80)}` : "none" },
     { name: "Failed posts", ok: failedPosts.length === 0, note: failedPosts.length ? `${failedPosts.length} (retried up to 3 times)` : "none" },
+    { name: "X spend this month", ok: spent < Number(cap?.value ?? 20) * 0.8, note: `$${spent.toFixed(2)} of $${Number(cap?.value ?? 20).toFixed(0)} budget` },
   ];
   const last = runs?.[0];
   return (
@@ -57,8 +62,17 @@ export default async function Queue() {
                   <span className="k" style={{ color: STATUS_COLOR[p.status] ?? "#A8A29A", fontSize: 11 }}>{p.status}{p.x_post_id ? ` · ${p.x_post_id}` : ""}</span>
                 </div>
                 <p style={{ margin: 0, color: "#E7E9EA", fontSize: 15, lineHeight: 1.4 }}>{p.caption}</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.image_url} alt={`${p.post_type} card`} width={1200} height={675} style={{ width: "100%", height: "auto", borderRadius: 16, border: "1px solid #2F3336", marginTop: 6 }} />
+                {p.image_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={p.image_url} alt={`${p.post_type} card`} width={1200} height={675} style={{ width: "100%", height: "auto", borderRadius: 16, border: "1px solid #2F3336", marginTop: 6 }} />
+                ) : null}
+                {p.payload?.poll ? (
+                  <div style={{ marginTop: 8, padding: 12, borderRadius: 14, border: "1px solid #2F3336" }}>
+                    {p.image_url && p.payload.pollText ? <p style={{ margin: "0 0 8px", color: "#71767B", fontSize: 13 }}>↳ Reply: {p.payload.pollText}</p> : null}
+                    {p.payload.poll.options.map((o: string) => <div key={o} style={{ padding: "8px 12px", margin: "4px 0", borderRadius: 999, border: "1px solid #1D9BF0", color: "#1D9BF0", fontSize: 14, fontWeight: 700 }}>{o}</div>)}
+                    <p style={{ margin: "6px 0 0", color: "#71767B", fontSize: 12 }}>Poll · {Math.round(p.payload.poll.minutes / 60)}h</p>
+                  </div>
+                ) : null}
                 {p.error ? <p style={{ margin: 0, color: "#E5484D", fontSize: 13 }}>{p.error}</p> : null}
               </div>
             </article>

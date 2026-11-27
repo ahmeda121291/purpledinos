@@ -3,8 +3,9 @@ import { db } from "./supabase";
 import { fmt, getLastGame, getLegendComps, getLineups, getOnThisDay, getRecordWatch, getSeasonPulse, getTrendReport } from "./data";
 import { getInjuries, getNextGame } from "./feeds";
 import { teamName } from "./teams";
+import { timeMachine, tracker, growth, trivia, triviaReveal } from "./social";
 
-export const CARD_TYPES = ["gameday", "final", "gradesopen", "grades", "record", "onthisday", "report", "lineup", "legends"] as const;
+export const CARD_TYPES = ["gameday", "final", "gradesopen", "grades", "record", "onthisday", "report", "lineup", "legends", "timemachine", "tracker", "growth", "trivia", "reveal"] as const;
 export type CardType = (typeof CARD_TYPES)[number];
 
 export const CARD_META: Record<CardType, { name: string; when: string }> = {
@@ -17,6 +18,11 @@ export const CARD_META: Record<CardType, { name: string; when: string }> = {
   report: { name: "The 401 Report", when: "Mondays" },
   lineup: { name: "Lineup Lab", when: "Wednesdays" },
   legends: { name: "Same Age, Same Jersey", when: "Fridays" },
+  timemachine: { name: "Time Machine + poll", when: "Tuesdays" },
+  tracker: { name: "Then vs Now", when: "Thursdays (alternating)" },
+  growth: { name: "Growth Chart", when: "Thursdays (alternating)" },
+  trivia: { name: "Raptors Trivia poll", when: "Saturdays" },
+  reveal: { name: "Trivia answer", when: "Sundays" },
 };
 
 const tz = "America/Toronto";
@@ -25,9 +31,11 @@ const time = (iso: string) => new Date(iso).toLocaleTimeString("en-CA", { timeZo
 const longDate = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-CA", { month: "long", day: "numeric", year: "numeric" });
 const short = (n: string) => n.replace(/^(\S)\S*\s/, "$1. ");
 
-export type Card = { type: CardType; caption: string; data: any } | null;
+export type Card = { type: CardType; caption: string; data: any; image?: string | null; poll?: { options: string[]; minutes: number }; pollText?: string } | null;
 
 export async function getCard(type: CardType): Promise<Card> {
+  const social: Record<string, () => Promise<any>> = { timemachine: timeMachine, tracker, growth, trivia: () => trivia(0), reveal: triviaReveal };
+  if (social[type]) { const s = await social[type](); return s ? { type, ...s } : null; }
   switch (type) {
     case "gameday": {
       const [next, pulse, inj] = await Promise.all([getNextGame(), getSeasonPulse(), getInjuries()]);
@@ -114,6 +122,8 @@ export async function getCard(type: CardType): Promise<Card> {
       const caption = `SAME AGE, SAME JERSEY 🦖 Scottie through ${l.games} games as a Raptor: ${fmt.n1(me?.ppg)}/${fmt.n1(me?.rpg)}/${fmt.n1(me?.apg)}. Vince at the same point: ${fmt.n1(vc?.ppg)}/${fmt.n1(vc?.rpg)}/${fmt.n1(vc?.apg)}. Where does he end up?`;
       return { type, caption, data: { games: l.games, rows: l.rows.map((r: any) => ({ ...r, short: short(r.full_name) })) } };
     }
+    default:
+      return null;
   }
 }
 
