@@ -63,10 +63,11 @@ export async function xUploadImage(png: ArrayBuffer): Promise<string> {
   throw new Error(`Media upload failed: ${lastErr}`);
 }
 
-export async function xPost(text: string, mediaIds?: string[]) {
+export async function xPost(text: string, mediaIds?: string[], replyTo?: string) {
   const url = `${API}/2/tweets`;
   const payload: any = { text };
   if (mediaIds?.length) payload.media = { media_ids: mediaIds };
+  if (replyTo) payload.reply = { in_reply_to_tweet_id: replyTo };
   const res = await fetch(url, {
     method: "POST",
     headers: { Authorization: oauthHeader("POST", url), "Content-Type": "application/json" },
@@ -75,4 +76,12 @@ export async function xPost(text: string, mediaIds?: string[]) {
   const body: any = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`X post failed ${res.status}: ${JSON.stringify(body).slice(0, 300)}`);
   return body?.data as { id: string; text: string };
+}
+
+export async function xDelete(id: string) {
+  const url = `${API}/2/tweets/${id}`;
+  const res = await fetch(url, { method: "DELETE", headers: { Authorization: oauthHeader("DELETE", url) } });
+  const body: any = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`X delete failed ${res.status}: ${JSON.stringify(body).slice(0, 200)}`);
+  return Boolean(body?.data?.deleted);
 }

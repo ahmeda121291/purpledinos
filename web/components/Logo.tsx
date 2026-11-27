@@ -26,8 +26,8 @@ export function LogoMark({ size = 46 }: { size?: number }) {
 
 export function Wordmark({ size = 21 }: { size?: number }) {
   return (
-    <span style={{ fontWeight: 800, fontSize: size, letterSpacing: "-.03em", lineHeight: 1 }}>
-      PURPLE <span className="se" style={{ fontSize: size * 1.2 }}>Dinos</span>
+    <span className="wm" style={{ fontWeight: 800, fontSize: size, letterSpacing: "-.03em", lineHeight: 1 }}>
+      <span className="wm-p">PURPLE</span> <span className="se" style={{ fontSize: size * 1.2 }}>Dinos</span>
     </span>
   );
 }

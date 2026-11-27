@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { db } from "./supabase";
 import { fmt, getLastGame, getLegendComps, getLineups, getOnThisDay, getRecordWatch, getSeasonPulse, getTrendReport } from "./data";
 import { getInjuries, getNextGame } from "./feeds";
 import { teamName } from "./teams";
 
-export const CARD_TYPES = ["gameday", "final", "record", "onthisday", "report", "lineup", "legends"] as const;
+export const CARD_TYPES = ["gameday", "final", "grades", "record", "onthisday", "report", "lineup", "legends"] as const;
 export type CardType = (typeof CARD_TYPES)[number];
 
 export const CARD_META: Record<CardType, { name: string; when: string }> = {
   gameday: { name: "Game Day", when: "Game mornings, 10 AM" },
   final: { name: "Final", when: "About 15 min after the buzzer" },
+  grades: { name: "Jurassic Park Grades", when: "Noon the day after a game" },
   record: { name: "Record Watch", when: "When someone gets close, and the moment a record falls" },
   onthisday: { name: "On This Day", when: "Daily, 12 PM" },
   report: { name: "The 401 Report", when: "Mondays" },
@@ -42,6 +44,23 @@ export async function getCard(type: CardType): Promise<Card> {
       const won = g.wl === "W";
       const caption = `FINAL: Raptors ${g.team_pts}, ${teamName(g.opponent_abbr)} ${g.opp_pts}. ${s ? `${s.full_name}: ${s.pts}/${s.reb}/${s.ast} on ${fmt.pct(s.ts_pct)} TS.` : ""} ${won ? "Dub. 🦖" : "On to the next one."}`;
       return { type, caption, data: { ...g, opponent: teamName(g.opponent_abbr), date: longDate(g.game_date), top: last.top } };
+    }
+    case "grades": {
+      const g = await getLatestGrades();
+      if (!g) return null;
+      const rows = g.rows.filter((r: any) => r.lab !== "INC").slice(0, 8);
+      const voted = rows.filter((r: any) => Number(r.votes) > 0);
+      const vs = `${g.game.is_home ? "vs" : "at"} ${teamName(g.game.opponent_abbr)}`;
+      let caption: string;
+      if (g.voters >= 10 && voted.length) {
+        const fanFav = [...voted].sort((a: any, b: any) => Number(b.fan_avg) - Number(a.fan_avg))[0];
+        const gap = [...voted].sort((a: any, b: any) => Math.abs(gpa(b.fan) - gpa(b.lab)) - Math.abs(gpa(a.fan) - gpa(a.lab)))[0];
+        caption = `JURASSIC PARK GRADES 🦖 ${g.voters} of you graded the ${vs} game. Top grade: ${fanFav.full_name} (${fanFav.fan}).${gap && gap.fan !== gap.lab ? ` Biggest beef with the numbers: ${gap.full_name}. Fans say ${gap.fan}, the Lab says ${gap.lab}.` : ""}`;
+      } else {
+        const best = rows[0] ? [...rows].sort((a: any, b: any) => Number(b.lab_score) - Number(a.lab_score))[0] : null;
+        caption = `JURASSIC PARK GRADES 🦖 The Lab's report card ${vs}.${best ? ` ${best.full_name} gets the ${best.lab}.` : ""} Think the numbers are wrong? Grade them yourself 👇`;
+      }
+      return { type, caption, data: { game: { ...g.game, opponent: teamName(g.game.opponent_abbr), date: longDate(g.game.game_date) }, rows, voters: g.voters } };
     }
     case "record": {
       const rows = await getRecordWatch(3);
@@ -86,3 +105,19 @@ export async function getCard(type: CardType): Promise<Card> {
 export const shareUrl = (type: CardType) => `https://purpledinos.ca/c/${type}`;
 export const intentUrl = (type: CardType, caption: string) =>
   `https://x.com/intent/post?text=${encodeURIComponent(caption + " via @PurpleDinosTO")}&url=${encodeURIComponent(shareUrl(type))}`;
+
+const GPA: Record<string, number> = { "A+": 4.3, A: 4, "B+": 3.3, B: 3, "C+": 2.3, C: 2, D: 1, F: 0 };
+const gpa = (g: string) => GPA[g] ?? 0;
+
+export async function getLatestGrades(gameId?: string) {
+  let game: any;
+  if (gameId) ({ data: game } = await db.from("games").select("game_id, game_date, opponent_abbr, is_home, wl, team_pts, opp_pts").eq("game_id", gameId).maybeSingle());
+  else ({ data: game } = await db.from("games").select("game_id, game_date, opponent_abbr, is_home, wl, team_pts, opp_pts").order("game_date", { ascending: false }).limit(1).maybeSingle());
+  if (!game) return null;
+  const [{ data: rows }, { data: meta }] = await Promise.all([
+    db.rpc("game_grades", { p_game: game.game_id }),
+    db.rpc("recent_grade_games", { p_limit: 30 }),
+  ]);
+  const m = ((meta as any[]) ?? []).find((x) => x.game_id === game.game_id);
+  return { game, rows: (rows as any[]) ?? [], voters: Number(m?.voters ?? 0), votes: Number(m?.votes ?? 0) };
+}

@@ -2,7 +2,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { db } from "@/lib/supabase";
+import { playerHref } from "@/lib/slug";
+import { track } from "./Analytics";
 
 type Season = { season_id: string; has_lineups: boolean };
 type Col = { key: string; label: string; fmt?: "1" | "int" | "signed"; title?: string };
@@ -74,7 +77,11 @@ function SortTable({ cols, rows, sort, dir, onSort, highlight }: { cols: Col[]; 
         <tbody>
           {rows.map((r, i) => (
             <tr key={r._key ?? i} style={highlight?.(r) ? { color: "var(--gold)", fontWeight: 700 } : undefined}>
-              {cols.map((c) => <td key={c.key}>{show(c, r[c.key])}</td>)}
+              {cols.map((c) => (
+                <td key={c.key} className={sort === c.key ? "sorted" : undefined}>
+                  {c.key === "full_name" ? <Link className="ul" href={playerHref(String(r.full_name))} style={{ color: "inherit", fontWeight: 600 }}>{r.full_name}</Link> : show(c, r[c.key])}
+                </td>
+              ))}
             </tr>
           ))}
           {!rows.length ? <tr><td colSpan={cols.length} className="muted" style={{ padding: 24 }}>No results for these filters.</td></tr> : null}
@@ -269,14 +276,14 @@ export default function StatsExplorer({ seasons }: { seasons: Season[] }) {
   const tab = p.get("tab", "players");
   const [copied, setCopied] = useState(false);
   const share = async () => {
-    try { await navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* ignore */ }
+    try { await navigator.clipboard.writeText(window.location.href); track("explorer_link_copied", { tab }); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* ignore */ }
   };
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
         <div className="tabs" role="tablist" aria-label="Explorer">
           {TABS.map((t) => (
-            <button key={t.id} role="tab" type="button" aria-selected={tab === t.id} className={tab === t.id ? "tab on" : "tab"} onClick={() => p.set({ tab: t.id })}>{t.label}</button>
+            <button key={t.id} role="tab" type="button" aria-selected={tab === t.id} className={tab === t.id ? "tab on" : "tab"} onClick={() => { p.set({ tab: t.id }); track("explorer_tab", { tab: t.id }); }}>{t.label}</button>
           ))}
         </div>
         <button type="button" className="btn btn-o" style={{ minHeight: 44, padding: "0 18px", fontSize: 14 }} onClick={share}>{copied ? "Link copied" : "Copy link to this view"}</button>

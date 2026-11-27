@@ -5,6 +5,9 @@ import Countdown from "@/components/Countdown";
 import { fmt, getCurrentSeason, getLastGame, getLineups, getOnThisDay, getRecordBook, getRecordWatch, getSeasonPulse, getTrendReport } from "@/lib/data";
 import { getHeadlines, getInjuries, getNextGame, timeAgo } from "@/lib/feeds";
 import { teamName } from "@/lib/teams";
+import { playerHref } from "@/lib/slug";
+import { getLatestGrades } from "@/lib/cards";
+import { GradeBadge } from "@/components/GradeBoard";
 
 export const revalidate = 600;
 
@@ -19,9 +22,9 @@ const longDate = (d: string) =>
   new Date(d + "T12:00:00Z").toLocaleDateString("en-CA", { month: "long", day: "numeric", year: "numeric" });
 
 export default async function Home() {
-  const [next, injuries, pulse, last, trend, watch, lineups, otd, book, news, season] = await Promise.all([
+  const [next, injuries, pulse, last, trend, watch, lineups, otd, book, news, season, grades] = await Promise.all([
     getNextGame(), getInjuries(), getSeasonPulse(), getLastGame(), getTrendReport(), getRecordWatch(8),
-    getLineups(3, 60, 4), getOnThisDay(), getRecordBook(1), getHeadlines(6), getCurrentSeason(),
+    getLineups(3, 60, 4), getOnThisDay(), getRecordBook(1), getHeadlines(6), getCurrentSeason(), getLatestGrades().catch(() => null),
   ]);
 
   const sp = pulse.find((p: any) => p.span === "season");
@@ -37,7 +40,7 @@ export default async function Home() {
   const watchItems = watch.map((w: any, i: number) => (
     <span key={i} style={{ display: "contents" }}>
       <span>
-        <strong style={{ color: "var(--ink)" }}>{w.full_name}</strong> is <span className="mono gold">{fmt.int(w.gap)}</span> {w.category} from passing{" "}
+        <Link className="ul" href={playerHref(w.full_name)} style={{ color: "var(--ink)", fontWeight: 700 }}>{w.full_name}</Link> is <span className="mono gold">{fmt.int(w.gap)}</span> {w.category} from passing{" "}
         <strong style={{ color: "var(--ink)" }}>{w.next_name}</strong> for <span className="mono gold">#{Number(w.rank_now) - 1}</span> all-time
       </span>
       <span aria-hidden="true" className="dot" style={{ width: 5, height: 5, background: "var(--gold)" }} />
@@ -169,7 +172,7 @@ export default async function Home() {
                 {last.top.map((p: any, i: number) => (
                   <div key={p.full_name} className="row" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px" }}>
                     <span className="se" style={{ fontSize: 24, width: 22, lineHeight: 1, color: i ? "var(--muted)" : undefined }}>{i + 1}</span>
-                    <span style={{ flex: 1 }}>{p.full_name} <span className="muted" style={{ fontSize: 13 }}>{p.pts}/{p.reb}/{p.ast}</span></span>
+                    <span style={{ flex: 1 }}><Link className="ul" href={playerHref(p.full_name)} style={{ color: "var(--ink)", fontWeight: 600 }}>{p.full_name}</Link> <span className="muted" style={{ fontSize: 13 }}>{p.pts}/{p.reb}/{p.ast}</span></span>
                     <span className="mono">{fmt.n1(p.game_score)}</span>
                   </div>
                 ))}
@@ -265,10 +268,21 @@ export default async function Home() {
         <div style={{ position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 40, flexWrap: "wrap", padding: "clamp(32px, 5.5vw, 76px)", borderRadius: 40, background: "linear-gradient(125deg, #4A2AA8, #24154F 50%, #100D18)", border: "1px solid rgba(217,184,120,.3)" }}>
           <div aria-hidden="true" className="drift2" style={{ position: "absolute", right: -120, top: -200, width: 560, height: 560, borderRadius: "50%", background: "radial-gradient(circle, rgba(217,184,120,.28), rgba(217,184,120,0) 65%)" }} />
           <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 16, minWidth: 0, flex: "1 1 520px" }}>
-            <span className="k gold">Jurassic Park Grades · Coming soon</span>
-            <h2 style={{ margin: 0, fontWeight: 800, fontSize: "clamp(38px, 5.6vw, 80px)", lineHeight: 0.95, letterSpacing: "-.045em" }}>Grade the squad.<br /><span className="se" style={{ fontSize: "1.02em" }}>The model grades you back.</span></h2>
-            <p style={{ margin: 0, color: "#E2DCD2", maxWidth: "36em", fontSize: 17 }}>Hand out your grades after the buzzer. We score your takes against the numbers and keep a season-long leaderboard of who actually watches the games.</p>
-            <a className="btn btn-g" href={X_URL} style={{ alignSelf: "flex-start", marginTop: 8 }}>Follow to get first access →</a>
+            <span className="k gold">Jurassic Park Grades{grades ? ` · ${grades.game.is_home ? "vs" : "at"} ${teamName(grades.game.opponent_abbr)}` : ""}</span>
+            <h2 style={{ margin: 0, fontWeight: 800, fontSize: "clamp(38px, 5.6vw, 80px)", lineHeight: 0.95, letterSpacing: "-.045em" }}>Grade the squad.<br /><span className="se" style={{ fontSize: "1.02em" }}>Then argue with the numbers.</span></h2>
+            <p style={{ margin: 0, color: "#E2DCD2", maxWidth: "36em", fontSize: 17 }}>Hand out a grade to every Raptor after the buzzer. The Lab grades them too, straight from Game Score and plus-minus. We post where fans and the numbers disagree.</p>
+            {grades ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, maxWidth: 460 }}>
+                {[...grades.rows].filter((r: any) => r.lab !== "INC").sort((x: any, y: any) => Number(y.lab_score) - Number(x.lab_score)).slice(0, 3).map((r: any) => (
+                  <div key={r.player_id} className="row" style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 6px" }}>
+                    <Link className="ul" href={playerHref(r.full_name)} style={{ flex: 1, color: "var(--ink)", fontWeight: 600 }}>{r.full_name}</Link>
+                    <GradeBadge g={r.lab} kind="lab" size={40} />
+                    <GradeBadge g={r.fan} kind="fan" size={40} />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <Link className="btn btn-g" href="/grades" style={{ alignSelf: "flex-start", marginTop: 8 }}>{grades && grades.voters ? `Join ${grades.voters} fans grading →` : "Grade the last game →"}</Link>
           </div>
           <div aria-hidden="true" style={{ position: "relative", display: "flex", gap: 10, fontWeight: 800, fontSize: 36 }}>
             {["A", "B", "C", "D", "F"].map((g, i) => <span key={g} className="tile" style={{ animationDelay: `${i * 1.2}s` }}>{g}</span>)}
@@ -291,7 +305,7 @@ function TrendList({ title, rows, max, up = false }: { title: string; rows: any[
       </span>
       {rows.map((r) => (
         <div key={r.full_name} className="row" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,.8fr) auto", gap: 12, alignItems: "center", padding: 8 }}>
-          <span>{r.full_name} <span className="muted" style={{ fontSize: 13 }}>{fmt.n1(r.ts_last5)}% TS</span></span>
+          <span><Link className="ul" href={playerHref(r.full_name)} style={{ color: "var(--ink)", fontWeight: 600 }}>{r.full_name}</Link> <span className="muted" style={{ fontSize: 13 }}>{fmt.n1(r.ts_last5)}% TS</span></span>
           <span className="track"><span className="bar" style={{ width: `${Math.max(8, (Math.abs(Number(r.ts_delta)) / max) * 100)}%`, background: up ? undefined : "var(--purple)" }} /></span>
           <span className="mono" style={{ color: up ? "var(--gold)" : "#B9A4F0" }}>{fmt.signed(r.ts_delta)}</span>
         </div>

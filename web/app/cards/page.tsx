@@ -11,7 +11,7 @@ export default async function Cards() {
   const cards = await Promise.all(CARD_TYPES.map(async (t) => ({ t, card: await getCard(t).catch(() => null) })));
   return (
     <div style={{ overflow: "hidden" }}>
-      <Header active="home" />
+      <Header active="none" />
       <main className="wrap" style={{ paddingTop: 64 }}>
         <div className="k gold" style={{ marginBottom: 12 }}>Preview · not public</div>
         <h1 className="h2" style={{ marginBottom: 12 }}>Post <span className="se" style={{ fontSize: "1.1em" }}>cards</span></h1>
