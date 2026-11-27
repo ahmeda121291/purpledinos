@@ -118,7 +118,8 @@ export async function runIngest(db: any, opts: { budgetMs?: number } = {}) {
 
   // Keep league averages, ages and jersey numbers current.
   if (Date.now() - started < budget - 8000) {
-    const { syncLeagueSeason, syncAges, syncRoster } = await import("./history");
+    const { syncLeagueSeason, syncAges, syncRoster, syncOpponents } = await import("./history");
+    counts.opponents = await syncOpponents(db, season).catch(() => -1);
     counts.league = await syncLeagueSeason(db, season).catch(() => -1);
     counts.ages = await syncAges(db, season).catch(() => -1);
     counts.roster = await syncRoster(db).catch(() => -1);

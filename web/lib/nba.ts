@@ -67,6 +67,9 @@ const dashParams = (season: string, extra: Record<string, string>): Record<strin
 export const nba = {
   leagueTeamsAdvanced: (season: string) => getJSON("leaguedashteamstats", dashParams(season, { MeasureType: "Advanced" })).then((j) => rows(j)),
   raptorsPlayers: (season: string) => getJSON("leaguedashplayerstats", dashParams(season, { TeamID: TOR })).then((j) => rows(j)),
+  leagueTeamsTotals: (season: string) => getJSON("leaguedashteamstats", dashParams(season, { PerMode: "Totals" })).then((j) => rows(j)),
+  // Every opponent's box score against Toronto.
+  oppLogs: (season: string, type: string) => getJSON("teamgamelogs", { ...logParams(season, type), TeamID: "", OppTeamID: TOR }).then((j) => rows(j)),
   roster: (season: string) => getJSON("commonteamroster", { LeagueID: "00", Season: season, TeamID: TOR }).then((j) => rows(j)),
   yearByYear: () => getJSON("teamyearbyyearstats", { LeagueID: "00", PerMode: "Totals", SeasonType: "Regular Season", TeamID: TOR }).then((j) => rows(j)),
   gameFinder: (season: string) => getJSON("leaguegamefinder", { PlayerOrTeam: "T", TeamID: TOR, LeagueID: "00", Season: season }).then((j) => rows(j)),
