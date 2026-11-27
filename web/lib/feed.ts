@@ -4,6 +4,7 @@
 // X bills $0.005 per post read, so every read is capped and written to x_usage.
 import { currentSeason } from "./nba";
 import { xGet, xMe, xRepost } from "./x";
+import { getNextGame, getRecentFinal } from "./feeds";
 
 const READ = 0.005, USER_READ = 0.01, REPOST = 0.015;
 const TZ = "America/Toronto";
@@ -75,6 +76,29 @@ async function raptorsMatcher(db: any) {
   return { test, clause };
 }
 
+/* ---------- game rhythm ---------- */
+// The feed follows the schedule: busiest while the Raptors are playing, quiet when they aren't.
+export type FeedMode = "live" | "postgame" | "gameday" | "offday" | "quiet";
+const POLICY: Record<FeedMode, { perDay: number; gapMin: number; ageMin: number; minScore: number; reads: number }> = {
+  live:     { perDay: 6, gapMin: 20,  ageMin: 20, minScore: 1.0, reads: 160 },
+  postgame: { perDay: 6, gapMin: 30,  ageMin: 20, minScore: 1.0, reads: 160 },
+  gameday:  { perDay: 6, gapMin: 90,  ageMin: 60, minScore: 1.2, reads: 160 },
+  offday:   { perDay: 2, gapMin: 180, ageMin: 90, minScore: 1.3, reads: 60 },
+  quiet:    { perDay: 1, gapMin: 360, ageMin: 90, minScore: 1.5, reads: 40 },
+};
+export async function feedMode(): Promise<FeedMode> {
+  const now = Date.now();
+  const [next, fin] = await Promise.all([getNextGame().catch(() => null), getRecentFinal(72).catch(() => null)]);
+  const tip = next ? Date.parse(next.tipISO) : null;
+  if (tip && tip <= now) return "live"; // started, not final yet
+  const finTip = fin ? Date.parse(fin.tipISO) : null;
+  if (finTip && now - finTip < 5 * 3600000) return "postgame"; // roughly 2.5h of game + 2.5h of reaction
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+  if (tip && new Date(tip).toLocaleDateString("en-CA", { timeZone: TZ }) === today) return "gameday";
+  const soon = tip && tip - now < 72 * 3600000;
+  return soon || finTip ? "offday" : "quiet"; // nothing within 3 days either way: off-season, All-Star break
+}
+
 /* ---------- ingest ---------- */
 function cleanText(t: string, urls: any[], quotedId: string | null) {
   let s = t;
@@ -87,10 +111,10 @@ function cleanText(t: string, urls: any[], quotedId: string | null) {
   return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/[ \t]+\n/g, "\n").trim();
 }
 
-export async function ingestFeed(db: any) {
+export async function ingestFeed(db: any, mode: FeedMode = "offday") {
   const out: string[] = [];
-  const [capStr, budgetStr, spent] = await Promise.all([setting(db, "feed_daily_reads", "100"), setting(db, "x_budget_month", "25"), monthSpendAll(db)]);
-  const cap = Number(capStr) || 100, budget = Number(budgetStr) || 25;
+  const [budgetStr, spent] = await Promise.all([setting(db, "x_budget_month", "25"), monthSpendAll(db)]);
+  const cap = POLICY[mode].reads, budget = Number(budgetStr) || 25;
   // Reads stop at 70% of the monthly budget so they can never squeeze out game-day posts.
   if (spent >= budget * 0.7) { out.push(`feed paused: $${spent.toFixed(2)} of $${budget} spent`); return out; }
 
@@ -162,12 +186,14 @@ export async function ingestFeed(db: any) {
 /* ---------- metrics refresh + scoring ---------- */
 // One refresh per post, ~2h after it went up, inside the same UTC day: X doesn't re-bill a
 // post read twice in one UTC day, so this should cost nothing. Logged at $0 so it's visible.
-export async function refreshAndScore(db: any) {
+export async function refreshAndScore(db: any, mode: FeedMode = "offday") {
   const out: string[] = [];
   const now = Date.now();
+  // Live: check a post ~20 min in so in-game reactions can be reposted while they matter.
+  const age = POLICY[mode].ageMin;
   const { data: due } = await db.from("feed_posts").select("id, created_at, fetched_at, metrics_at")
-    .gte("fetched_at", utcMidnight()).lte("created_at", new Date(now - 100 * 60000).toISOString()).gte("created_at", new Date(now - 8 * 3600000).toISOString());
-  const ids = ((due as any[]) ?? []).filter((p) => Date.parse(p.metrics_at) - Date.parse(p.created_at) < 90 * 60000).map((p) => p.id).slice(0, 100);
+    .gte("fetched_at", utcMidnight()).lte("created_at", new Date(now - (age + 5) * 60000).toISOString()).gte("created_at", new Date(now - 8 * 3600000).toISOString());
+  const ids = ((due as any[]) ?? []).filter((p) => Date.parse(p.metrics_at) - Date.parse(p.created_at) < age * 60000).map((p) => p.id).slice(0, 100);
   if (ids.length) {
     const body = await xGet("/2/tweets", { ids: ids.join(","), "tweet.fields": "public_metrics" });
     const ts = new Date().toISOString();
@@ -202,12 +228,13 @@ export async function refreshAndScore(db: any) {
 }
 
 /* ---------- reposts ---------- */
-export async function maybeRepost(db: any) {
+export async function maybeRepost(db: any, mode: FeedMode = "offday") {
   const out: string[] = [];
   if ((await setting(db, "posting_mode", "preview")) !== "live") return out;
   const hour = Number(new Date().toLocaleString("en-US", { timeZone: TZ, hour: "numeric", hour12: false })) % 24;
-  if (hour < 8) return out; // nothing between midnight and 8am
-  const perDay = Number(await setting(db, "feed_reposts_per_day", "3")) || 3;
+  if (hour < 8 && mode !== "live" && mode !== "postgame") return out; // overnight only for late games
+  const pol = POLICY[mode];
+  const perDay = pol.perDay;
   const budget = Number(await setting(db, "x_budget_month", "25")) || 25;
   if ((await monthSpendAll(db)) >= budget * 0.8) return out;
 
@@ -216,15 +243,21 @@ export async function maybeRepost(db: any) {
   const done = (today as any[]) ?? [];
   if (done.length >= perDay) return out;
   const last = done.map((d) => Date.parse(d.reposted_at)).sort().pop();
-  if (last && Date.now() - last < 2 * 3600000) return out; // space them out
+  if (last && Date.now() - last < pol.gapMin * 60000) return out; // space them out
+  // Let our own posts (Final, Grades) sit on top of the profile for 20 minutes.
+  const { data: ours } = await db.from("x_posts").select("posted_at").not("posted_at", "is", null).order("posted_at", { ascending: false }).limit(1).maybeSingle();
+  if (ours?.posted_at && Date.now() - Date.parse(ours.posted_at) < 20 * 60000) return out;
 
-  const { data: cands } = await db.from("feed_posts").select("id, author_id, handle, score, created_at, metrics_at")
+  const { data: cands } = await db.from("feed_posts").select("id, author_id, handle, score, created_at, metrics_at, media")
     .eq("raptors", true).eq("hidden", false).is("reposted_at", null)
-    .gte("created_at", new Date(Date.now() - 12 * 3600000).toISOString())
+    .gte("created_at", new Date(Date.now() - (mode === "live" || mode === "postgame" ? 3 : 12) * 3600000).toISOString())
     .order("score", { ascending: false }).limit(20);
   const used = new Set(done.map((d) => d.author_id));
-  const pick = ((cands as any[]) ?? []).find((c) => !used.has(c.author_id) && Number(c.score) >= 1.2
-    && Date.parse(c.metrics_at) - Date.parse(c.created_at) >= 90 * 60000); // only once we've seen how it's doing
+  // During games, clips and photos get a boost: they're what people want mid-game.
+  const live = mode === "live" || mode === "postgame";
+  const ranked = ((cands as any[]) ?? []).map((c) => ({ ...c, s: Number(c.score) * (live && c.media?.length ? 1.3 : 1) })).sort((a, b) => b.s - a.s);
+  const pick = ranked.find((c) => !used.has(c.author_id) && c.s >= pol.minScore
+    && Date.parse(c.metrics_at) - Date.parse(c.created_at) >= pol.ageMin * 60000); // only once we've seen how it's doing
   if (!pick) return out;
 
   let me = await setting(db, "x_user_id", "");
@@ -233,14 +266,15 @@ export async function maybeRepost(db: any) {
   await xRepost(me, pick.id);
   await db.from("feed_posts").update({ reposted_at: new Date().toISOString() }).eq("id", pick.id);
   await log(db, "repost", 1, REPOST);
-  out.push(`reposted @${pick.handle} ${pick.id} (score ${pick.score})`);
+  out.push(`reposted @${pick.handle} ${pick.id} (score ${pick.s.toFixed(2)}, ${mode})`);
   return out;
 }
 
 export async function runFeed(db: any) {
-  const out: string[] = [];
-  out.push(...(await ingestFeed(db)));
-  out.push(...(await refreshAndScore(db)));
-  out.push(...(await maybeRepost(db)));
+  const mode = await feedMode();
+  const out: string[] = [`mode: ${mode}`];
+  out.push(...(await ingestFeed(db, mode)));
+  out.push(...(await refreshAndScore(db, mode)));
+  out.push(...(await maybeRepost(db, mode)));
   return out;
 }
