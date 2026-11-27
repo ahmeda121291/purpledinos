@@ -5,7 +5,7 @@ import { METRIC, fmtMetric } from "./metrics";
 import { getNextGame, getInjuries } from "./feeds";
 
 export type Poll = { options: string[]; minutes: number };
-export type Social = { caption: string; data: any; image: string | null; poll?: Poll; pollText?: string };
+export type Social = { caption: string; data: any; image?: string | null; poll?: Poll; pollText?: string };
 
 const SITE = "https://purpledinos.ca";
 const last = (n: string) => n.split(" ").filter((p) => !/^(Jr\.?|II|III|IV)$/.test(p)).pop() ?? n;
@@ -166,11 +166,13 @@ export async function growth(): Promise<Social | null> {
     const idx = rows.findIndex((r) => r.season_id === season);
     if (idx < 0 || idx > 24) continue;
     const r = rows[idx], m = METRIC[metric];
-    const qs = new URLSearchParams({ kind: "progress", players: r.full_name, pm: metric, px: "season" }).toString();
+    // Ladder: the top jumps all-time, with this one slotted in where it ranks.
+    const pick = (x: any, i: number) => ({ name: x.full_name, season: x.season_id, delta: Number(x.delta), rank: i + 1, me: x === r });
+    const ladder = rows.slice(0, 5).map(pick);
+    if (idx >= 5) ladder.push(pick(r, idx));
     return {
       caption: `GROWTH CHART 📈 ${r.full_name}'s ${m.label.toLowerCase()}: ${fmtMetric(metric, r.prev_val)} last season → ${fmtMetric(metric, r.val)} now. That's the #${idx + 1} biggest one-year jump in Raptors history.`,
-      data: { metric, player: r.full_name, rank: idx + 1 },
-      image: `${SITE}/api/viz?${qs}`,
+      data: { metric, label: m.label, player: r.full_name, rank: idx + 1, prev: fmtMetric(metric, r.prev_val), now: fmtMetric(metric, r.val), delta: fmtMetric(metric, r.delta), prevSeason: r.prev_season, season: r.season_id, ladder },
     };
   }
   return null;

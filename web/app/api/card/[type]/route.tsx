@@ -132,14 +132,54 @@ function render(type: CardType, d: any) {
         </Frame>
       );
     }
+    case "growth": {
+      const max = Math.max(...d.ladder.map((x: any) => x.delta));
+      return (
+        <Frame label="Growth Chart">
+          <div style={{ display: "flex", gap: 56, alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", width: 520, gap: 10 }}>
+              <K size={20}>{d.label}</K>
+              <div style={{ display: "flex", fontSize: 58, fontWeight: 800, lineHeight: 1, letterSpacing: -2 }}>{d.player}</div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 22, marginTop: 18 }}>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <K size={15} color={MUTED}>{d.prevSeason}</K>
+                  <span style={{ fontFamily: MONO, fontSize: 62, color: SOFT }}>{d.prev}</span>
+                </div>
+                <span style={{ fontSize: 54, color: MUTED, paddingBottom: 6 }}>→</span>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <K size={15} color={GOLD}>{d.season}</K>
+                  <span style={{ fontFamily: MONO, fontSize: 96, lineHeight: 1, color: GOLD }}>{d.now}</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", marginTop: 14 }}><Serif size={36}>{`#${d.rank} biggest one-year jump in team history`}</Serif></div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 12 }}>
+              <K size={15} color={MUTED}>Biggest jumps all-time</K>
+              {d.ladder.map((x: any) => (
+                <div key={x.rank} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20, color: x.me ? GOLD : SOFT, fontWeight: x.me ? 800 : 500 }}>
+                    <span>{`${x.rank}. ${x.name} ’${String(x.season).slice(5)}`}</span>
+                    <span style={{ fontFamily: MONO }}>{`+${Number(x.delta).toFixed(1)}`}</span>
+                  </div>
+                  <div style={{ display: "flex", height: 8, borderRadius: 4, background: "rgba(243,238,230,.08)" }}>
+                    <div style={{ display: "flex", width: `${Math.max(6, (x.delta / max) * 100)}%`, height: 8, borderRadius: 4, background: x.me ? `linear-gradient(90deg, ${PURPLE}, ${GOLD})` : "rgba(155,123,234,.45)" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Frame>
+      );
+    }
     case "onthisday":
       return (
         <Frame label="On This Day">
           <div style={{ position: "absolute", right: -10, top: -60, display: "flex" }}><Serif size={420} color="rgba(243,238,230,.08)">&apos;{String(d.game_date).slice(2, 4)}</Serif></div>
           <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 900 }}>
             <K size={22}>{d.date}{d.season_type === "Playoffs" ? " · Playoffs" : ""}</K>
-            <div style={{ display: "flex", flexWrap: "wrap", fontSize: 76, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>
-              Raptors {d.verb} the {d.opponent} {d.team_pts}–{d.opp_pts}
+            <div style={{ display: "flex", fontSize: 70, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>{`Raptors ${d.verb} the ${d.opponent}`}</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
+              <span style={{ fontFamily: MONO, fontSize: 64, color: d.team_pts > d.opp_pts ? GOLD : INK }}>{`${d.team_pts}–${d.opp_pts}`}</span>
             </div>
             {d.top_name ? <div style={{ display: "flex", fontSize: 34, color: SOFT }}>{d.top_name} led the way with {d.top_pts} points.</div> : null}
             <div style={{ display: "flex", marginTop: 4 }}><Serif size={40}>Here since the purple days.</Serif></div>
