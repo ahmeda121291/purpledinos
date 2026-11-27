@@ -19,12 +19,13 @@ export default function Progression({ name, seasons }: { name: string; seasons: 
         const X = (i: number) => 8 + (i / (pts.length - 1)) * (W - 16), Y = (v: number) => H - 8 - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * (H - 16);
         const best = pts.reduce((b, p, i) => ((m.lower ? p.v < pts[b].v : p.v > pts[b].v) ? i : b), 0);
         const first = pts[0], last = pts[pts.length - 1];
-        const up = (last.v - first.v > 0) !== Boolean(m.lower);
+        const rose = last.v - first.v > 0;
+        const good = rose !== Boolean(m.lower);
         return (
           <Link key={k} href={`/stats-lab?tab=progress&pp=${encodeURIComponent(name)}&pm=${k}#explorer`} className="glass lift prog-card" aria-label={`${m.label} by season, chart it`}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
               <span className="k muted" style={{ fontSize: 10 }}>{m.short}{m.tip ? <Tip term={m.tip} /> : null}</span>
-              <span className="mono" style={{ fontSize: 12, color: up ? "var(--gold)" : "#B9A4F0" }}>{first.s.slice(2, 4)}→{last.s.slice(2, 4)} {up ? "▲" : "▼"}</span>
+              <span className="mono" style={{ fontSize: 12, color: good ? "var(--gold)" : "#B9A4F0" }}>{first.s.slice(2)}→{last.s.slice(2)} {rose ? "▲" : "▼"}</span>
             </div>
             <div className="mono" style={{ fontSize: 26, fontWeight: 700, margin: "2px 0 6px" }}>{fmtMetric(k, last.v)}</div>
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} aria-hidden="true">
