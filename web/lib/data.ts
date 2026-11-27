@@ -51,7 +51,7 @@ export async function getLineups(size: number, minMinutes: number, limit: number
     .gte("minutes", minMinutes)
     .order("net_rtg", { ascending })
     .limit(limit);
-  return (data ?? []).map((r: Row) => ({ ...r, name: String(r.raw?.GROUP_NAME ?? "").split(" - ").join(" · ") }));
+  return (data ?? []).map((r: Row): Row => ({ ...r, name: String(r.raw?.GROUP_NAME ?? "").split(" - ").join(" · ") }));
 }
 
 const LEADER_LABELS: Record<string, string> = { PTS: "Points", AST: "Assists", REB: "Rebounds", STL: "Steals", BLK: "Blocks", FG3M: "Threes", GP: "Games" };
