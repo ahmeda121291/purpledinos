@@ -81,7 +81,7 @@ function cleanText(t: string, urls: any[], quotedId: string | null) {
   for (const u of urls) {
     if (!u.url) continue;
     // Media links and the quoted post's own link are shown as media / a quote, not as text.
-    const drop = u.media_key || (quotedId && String(u.expanded_url ?? "").includes(quotedId));
+    const drop = u.media_key || /^pic\.(x|twitter)\.com\//.test(u.display_url ?? "") || /\/(photo|video)\/\d+$/.test(u.expanded_url ?? "") || (quotedId && String(u.expanded_url ?? "").includes(quotedId));
     s = s.split(u.url).join(drop ? "" : u.display_url ?? u.expanded_url);
   }
   return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/[ \t]+\n/g, "\n").trim();
@@ -130,7 +130,7 @@ export async function ingestFeed(db: any) {
     await log(db, "feed_posts", posts.length, posts.length * READ);
     const media = new Map(((body.includes?.media as any[]) ?? []).map((m) => [m.media_key, m]));
     const rows = posts.map((p) => {
-      const urls = ((p.entities?.urls as any[]) ?? []).filter((u) => !u.media_key && !String(u.expanded_url ?? "").match(/\/status\/\d+/));
+      const urls = ((p.entities?.urls as any[]) ?? []).filter((u) => !u.media_key && !/^pic\./.test(u.display_url ?? "") && !String(u.expanded_url ?? "").match(/\/status\/\d+/));
       const m = ((p.attachments?.media_keys as string[]) ?? []).map((k) => media.get(k)).filter(Boolean)
         .map((x: any) => ({ type: x.type, url: x.url ?? x.preview_image_url, w: x.width, h: x.height, alt: x.alt_text ?? null }));
       const raw = p.note_tweet?.text ?? p.text;
