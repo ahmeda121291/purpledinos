@@ -8,25 +8,25 @@ type Tab = "latest" | "trending" | "media";
 export default function FeedView({ posts }: { posts: FeedPost[] }) {
   const [tab, setTab] = useState<Tab>("latest");
   const [who, setWho] = useState<string | null>(null);
-  const [raps, setRaps] = useState(false);
+  const [all, setAll] = useState(false);
 
   const voices = useMemo(() => {
     const m = new Map<string, { handle: string; name: string; avatar: string | null; count: number }>();
-    for (const p of posts) {
+    for (const p of posts.filter((x) => all || x.raptors)) {
       const v = m.get(p.handle) ?? { handle: p.handle, name: p.name, avatar: p.avatar_url, count: 0 };
       v.count++; m.set(p.handle, v);
     }
     return [...m.values()].sort((a, b) => b.count - a.count);
-  }, [posts]);
+  }, [posts, all]);
 
   const shown = useMemo(() => {
-    let r = posts.filter((p) => (!who || p.handle === who) && (!raps || p.raptors));
+    let r = posts.filter((p) => (!who || p.handle === who) && (all || p.raptors));
     if (tab === "media") r = r.filter((p) => p.media?.length);
     if (tab === "trending") r = [...r].filter((p) => Date.now() - Date.parse(p.created_at) < 48 * 3600000).sort((a, b) => Number(b.score) - Number(a.score)).slice(0, 40);
     return r.slice(0, 120);
-  }, [posts, tab, who, raps]);
+  }, [posts, tab, who, all]);
 
-  const hot = posts.filter(isTrending).length;
+  const hot = posts.filter((p) => isTrending(p) && (all || p.raptors)).length;
 
   return (
     <>
@@ -36,7 +36,10 @@ export default function FeedView({ posts }: { posts: FeedPost[] }) {
             <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? "on" : ""}`} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
-        <button className={`pill ${raps ? "on" : ""}`} aria-pressed={raps} onClick={() => setRaps(!raps)}>Raptors talk only</button>
+        <div className="tabs" role="group" aria-label="What to show">
+          <button className={`tab ${!all ? "on" : ""}`} aria-pressed={!all} onClick={() => setAll(false)}>Raptors talk</button>
+          <button className={`tab ${all ? "on" : ""}`} aria-pressed={all} onClick={() => setAll(true)}>Everything</button>
+        </div>
       </div>
 
       <div role="group" aria-label="Filter by writer" className="voices" style={{ display: "flex", gap: 10, overflowX: "auto", padding: "4px 2px 14px", marginBottom: 18, scrollbarWidth: "thin" }}>

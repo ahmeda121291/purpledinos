@@ -29,7 +29,7 @@ export default async function Home() {
     getNextGame(), getInjuries(), getSeasonPulse(), getLastGame(), getTrendReport(), getRecordWatch(8),
     getLineups(3, 60, 4), getOnThisDay(), getRecordBook(1), getHeadlines(6), getCurrentSeason(), getLatestGrades().catch(() => null),
   ]);
-  const { data: feedRows } = await db.from("v_feed").select("*").gte("created_at", new Date(Date.now() - 36 * 3600000).toISOString()).order("score", { ascending: false }).limit(4);
+  const { data: feedRows } = await db.from("v_feed").select("*").eq("raptors", true).gte("created_at", new Date(Date.now() - 36 * 3600000).toISOString()).order("score", { ascending: false }).limit(4);
   const feed = (feedRows as FeedPost[]) ?? [];
 
   const sp = pulse.find((p: any) => p.span === "season");

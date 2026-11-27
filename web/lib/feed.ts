@@ -60,7 +60,7 @@ async function raptorsMatcher(db: any) {
   const names = [...new Set(((data as any[]) ?? []).map((r) => r.full_name))];
   const full = names.map((n) => n.toLowerCase());
   const last = names.map((n) => n.split(" ").slice(-1)[0]).filter((l) => l.length > 3);
-  const loose = /\b(raptors|raps|we the north|wethenorth|darko|scotiabank arena|raptors 905|jurassic park)\b/i;
+  const loose = /raptors|\b(raps|we the north|wethenorth|darko|scotiabank arena|jurassic park|905)\b/i;
   return (t: string) => {
     if (loose.test(t)) return true;
     const lo = t.toLowerCase();
@@ -71,11 +71,15 @@ async function raptorsMatcher(db: any) {
 }
 
 /* ---------- ingest ---------- */
-function cleanText(t: string, urls: any[], hasMedia: boolean) {
+function cleanText(t: string, urls: any[], quotedId: string | null) {
   let s = t;
-  for (const u of urls) if (u.url && u.expanded_url) s = s.split(u.url).join(u.display_url ?? u.expanded_url);
-  if (hasMedia) s = s.replace(/\s*https:\/\/t\.co\/\w+\s*$/, "");
-  return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+  for (const u of urls) {
+    if (!u.url) continue;
+    // Media links and the quoted post's own link are shown as media / a quote, not as text.
+    const drop = u.media_key || (quotedId && String(u.expanded_url ?? "").includes(quotedId));
+    s = s.split(u.url).join(drop ? "" : u.display_url ?? u.expanded_url);
+  }
+  return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/[ \t]+\n/g, "\n").trim();
 }
 
 export async function ingestFeed(db: any) {
@@ -119,17 +123,19 @@ export async function ingestFeed(db: any) {
     await log(db, "feed_posts", posts.length, posts.length * READ);
     const media = new Map(((body.includes?.media as any[]) ?? []).map((m) => [m.media_key, m]));
     const rows = posts.map((p) => {
-      const urls = ((p.entities?.urls as any[]) ?? []).filter((u) => !u.media_key);
+      const urls = ((p.entities?.urls as any[]) ?? []).filter((u) => !u.media_key && !String(u.expanded_url ?? "").match(/\/status\/\d+/));
       const m = ((p.attachments?.media_keys as string[]) ?? []).map((k) => media.get(k)).filter(Boolean)
         .map((x: any) => ({ type: x.type, url: x.url ?? x.preview_image_url, w: x.width, h: x.height, alt: x.alt_text ?? null }));
       const raw = p.note_tweet?.text ?? p.text;
-      const text = cleanText(raw, (p.entities?.urls as any[]) ?? [], m.length > 0);
+      const quotedId = ((p.referenced_tweets as any[]) ?? []).find((r) => r.type === "quoted")?.id ?? null;
+      const text = cleanText(raw, (p.entities?.urls as any[]) ?? [], quotedId);
+      const linkText = ((p.entities?.urls as any[]) ?? []).map((u) => `${u.expanded_url ?? ""} ${u.title ?? ""}`).join(" ");
       return {
         id: p.id, author_id: p.author_id, handle: byId.get(p.author_id) ?? null, text, created_at: p.created_at, lang: p.lang,
         metrics: p.public_metrics ?? {}, media: m,
         urls: urls.map((u) => ({ url: u.expanded_url, display: u.display_url, title: u.title ?? null, image: u.images?.[0]?.url ?? null })),
-        quoted_id: ((p.referenced_tweets as any[]) ?? []).find((r) => r.type === "quoted")?.id ?? null,
-        raptors: isRaps(raw), metrics_at: new Date().toISOString(),
+        quoted_id: quotedId,
+        raptors: isRaps(`${raw} ${linkText}`), metrics_at: new Date().toISOString(),
       };
     });
     if (rows.length) {
