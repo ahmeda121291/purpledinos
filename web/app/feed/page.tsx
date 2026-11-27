@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Feed() {
-  const { data } = await db.from("v_feed").select("*").order("created_at", { ascending: false }).limit(400);
+  const { data } = await db.from("v_feed").select("*").eq("raptors", true).order("created_at", { ascending: false }).limit(400);
   const posts = (data as FeedPost[]) ?? [];
   const voices = new Set(posts.map((p) => p.handle)).size;
   return (
