@@ -156,11 +156,11 @@ export async function getViz(q: URLSearchParams): Promise<any> {
     const names = (q.get("players") || "Scottie Barnes,Vince Carter,DeMar DeRozan,Kyle Lowry").split(",").filter(Boolean).slice(0, 4);
     const am = q.get("am") || "pts";
     const { data } = await db.rpc("career_arc", { p_names: names });
-    const by = new Map<string, any[]>();
-    for (const r of (data as any[]) ?? []) by.set(r.full_name, [...(by.get(r.full_name) ?? []), r]);
+    const by = new Map<string, any>(((data as any[]) ?? []).map((r) => [r.full_name, r]));
     const series = names.filter((n) => by.has(n)).map((n) => {
-      const g = by.get(n)!;
-      const vals = am === "gmsc" ? g.map((_, i) => { const w = g.slice(Math.max(0, i - 19), i + 1); return w.reduce((a, b) => a + Number(b.game_score), 0) / w.length; }) : g.map((r) => Number(r[`cum_${am}`]));
+      const r = by.get(n);
+      const gs: number[] = (r.gmsc ?? []).map(Number);
+      const vals = am === "gmsc" ? gs.map((_, i) => { const w = gs.slice(Math.max(0, i - 19), i + 1); return w.reduce((a, b) => a + b, 0) / w.length; }) : ((r[`cum_${am}`] ?? []) as any[]).map(Number);
       return { name: n, vals };
     });
     const LBL: Record<string, string> = { pts: "Career points as a Raptor", reb: "Career rebounds as a Raptor", ast: "Career assists as a Raptor", gmsc: "Game Score, 20-game average" };
