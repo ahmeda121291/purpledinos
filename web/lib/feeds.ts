@@ -29,7 +29,12 @@ export async function getNextGame(): Promise<NextGame | null> {
     const us = comps.find((c) => c?.team?.abbreviation === "TOR");
     const them = comps.find((c) => c?.team?.abbreviation !== "TOR");
     if (!them) return null;
+    const isHome = us?.homeAway === "home";
     const tv = (comp.broadcasts ?? [])
+      .filter((b: any) => {
+        const market = String((typeof b?.market === "string" ? b.market : b?.market?.type) ?? "").toLowerCase();
+        return !market || market === "national" || market === (isHome ? "home" : "away");
+      })
       .map((b: any) => b?.media?.shortName ?? b?.names?.[0])
       .filter(Boolean)
       .slice(0, 2)

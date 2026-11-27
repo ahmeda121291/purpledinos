@@ -15,11 +15,15 @@ function admin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-function authorized(req: Request) {
+async function authorized(req: Request, db: any) {
   const secret = process.env.CRON_SECRET;
   const auth = req.headers.get("authorization");
-  if (secret) return auth === `Bearer ${secret}`;
-  return (req.headers.get("user-agent") ?? "").startsWith("vercel-cron");
+  if (secret && auth === `Bearer ${secret}`) return true;
+  if (!secret && (req.headers.get("user-agent") ?? "").startsWith("vercel-cron")) return true;
+  const token = new URL(req.url).searchParams.get("token");
+  if (!token) return false;
+  const { data } = await db.from("job_tokens").select("token").eq("token", token).maybeSingle();
+  return Boolean(data);
 }
 
 async function upsert(db: any, table: string, data: any[], onConflict: string, ignore = false) {
@@ -31,8 +35,8 @@ async function upsert(db: any, table: string, data: any[], onConflict: string, i
 }
 
 export async function GET(req: Request) {
-  if (!authorized(req)) return new Response("Unauthorized", { status: 401 });
   const db = admin();
+  if (!(await authorized(req, db))) return new Response("Unauthorized", { status: 401 });
   const season = currentSeason();
   const started = Date.now();
   const { data: run } = await db.from("job_runs").insert({ job: "nightly" }).select("id").single();
