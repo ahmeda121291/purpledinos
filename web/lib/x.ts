@@ -43,6 +43,26 @@ export async function xMe() {
   return { status: res.status, accessLevel: res.headers.get("x-access-level"), body };
 }
 
+// Uploads a PNG and returns its media id. Tries the v2 endpoint, then the v1.1 one.
+export async function xUploadImage(png: ArrayBuffer): Promise<string> {
+  const attempts = [
+    { url: `${API}/2/media/upload`, extra: { media_category: "tweet_image" }, pick: (b: any) => b?.data?.id },
+    { url: "https://upload.twitter.com/1.1/media/upload.json", extra: {}, pick: (b: any) => b?.media_id_string },
+  ];
+  let lastErr = "";
+  for (const a of attempts) {
+    const form = new FormData();
+    form.append("media", new Blob([png], { type: "image/png" }), "card.png");
+    for (const [k, v] of Object.entries(a.extra)) form.append(k, v as string);
+    const res = await fetch(a.url, { method: "POST", headers: { Authorization: oauthHeader("POST", a.url) }, body: form });
+    const body: any = await res.json().catch(() => ({}));
+    const id = a.pick(body);
+    if (res.ok && id) return String(id);
+    lastErr = `${a.url} ${res.status} ${JSON.stringify(body).slice(0, 200)}`;
+  }
+  throw new Error(`Media upload failed: ${lastErr}`);
+}
+
 export async function xPost(text: string, mediaIds?: string[]) {
   const url = `${API}/2/tweets`;
   const payload: any = { text };

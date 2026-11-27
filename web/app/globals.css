@@ -46,3 +46,17 @@ table.t tr:hover td{background:rgba(243,238,230,.04)}
 .bar{animation:pd-grow 1.8s cubic-bezier(.2,.7,.2,1) both}
 .tile{animation:pd-grade 6s ease-in-out infinite}
 }
+.controls{display:flex;flex-wrap:wrap;gap:16px 18px;align-items:flex-end;margin-bottom:18px}
+.ctl{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ctl .k{font-size:11px}
+.ctl select,.ctl input{min-height:44px;padding:0 14px;border-radius:12px;border:1px solid rgba(243,238,230,.22);background:rgba(20,17,26,.9);color:var(--ink);font:500 15px 'Bricolage Grotesque Variable',system-ui,sans-serif}
+.ctl select:focus,.ctl input:focus,.pill:focus-visible,.tab:focus-visible,.th-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid rgba(243,238,230,.22);background:transparent;color:var(--soft);font:500 14px 'Bricolage Grotesque Variable',system-ui,sans-serif;cursor:pointer;transition:all .2s}
+.pill:hover{color:var(--ink);border-color:rgba(217,184,120,.5)}
+.pill.on{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;padding:5px;border-radius:999px;border:1px solid rgba(243,238,230,.14);background:rgba(20,17,26,.7)}
+.tab{min-height:44px;padding:0 20px;border-radius:999px;border:0;background:transparent;color:var(--soft);font:600 15px 'Bricolage Grotesque Variable',system-ui,sans-serif;cursor:pointer}
+.tab.on{background:linear-gradient(135deg,#6B3FD4,#4A2AA8);color:#fff}
+.th-btn{all:unset;cursor:pointer;font:inherit;letter-spacing:inherit;text-transform:inherit}
+.th-btn:hover{color:var(--ink)}

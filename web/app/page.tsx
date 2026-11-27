@@ -208,7 +208,7 @@ export default async function Home() {
                   </div>
                 ))}
               </div>
-              <Link className="btn btn-o" href="/stats-lab" style={{ marginTop: "auto" }}>5-man units in the Lab →</Link>
+              <Link className="btn btn-o" href="/stats-lab?tab=lineups#explorer" style={{ marginTop: "auto" }}>Explore every lineup →</Link>
             </article>
           ) : null}
         </div>
@@ -241,7 +241,7 @@ export default async function Home() {
                 <span className="k gold">{b.label}</span><span>{b.name}</span><span className="mono">{fmt.int(b.value)}</span>
               </div>
             ))}
-            <Link href="/stats-lab#records" style={{ marginTop: "auto", display: "inline-flex", alignItems: "center", minHeight: 44, fontWeight: 600 }}>Full record book →</Link>
+            <Link href="/stats-lab?tab=leaders#explorer" style={{ marginTop: "auto", display: "inline-flex", alignItems: "center", minHeight: 44, fontWeight: 600 }}>Full record book →</Link>
           </article>
         </div>
       </section>

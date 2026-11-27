@@ -1,26 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Header, Footer } from "@/components/Chrome";
-import { fmt, getCurrentSeason, getLegendComps, getLineups, getRecordBook, getSeasonPulse, getTrendReport } from "@/lib/data";
+import StatsExplorer from "@/components/StatsExplorer";
+import { db } from "@/lib/supabase";
+import { fmt, getCurrentSeason, getSeasonPulse } from "@/lib/data";
 
 export const revalidate = 600;
 export const metadata: Metadata = { title: "Stats Lab · Purple Dinos", description: "Raptors lineups, efficiency and franchise history, ranked against every season since 1995." };
 
 export default async function StatsLab() {
-  const [season, pulse, best5, worst5, rotation, legends, book] = await Promise.all([
+  const [season, pulse, seasonRows] = await Promise.all([
     getCurrentSeason(),
     getSeasonPulse(),
-    getLineups(5, 25, 6),
-    getLineups(5, 25, 3, true),
-    getTrendReport(),
-    getLegendComps(["Vince Carter", "Chris Bosh", "DeMar DeRozan", "Kyle Lowry", "Pascal Siakam"], "Scottie Barnes"),
-    getRecordBook(5),
+    db.from("v_seasons").select("season_id, has_lineups").order("season_id", { ascending: false }),
   ]);
+  const seasons = ((seasonRows.data as any[]) ?? []).map((r) => ({ season_id: r.season_id, has_lineups: Boolean(r.has_lineups) }));
   const sp = pulse.find((p: any) => p.span === "season");
   const l10 = pulse.find((p: any) => p.span === "last10");
-  const rot = [...rotation].sort((a: any, b: any) => Number(b.mpg) - Number(a.mpg));
-  const cats = ["PTS", "REB", "AST", "STL", "BLK", "FG3M"];
-  const byCat = cats.map((c) => ({ c, rows: book.filter((b) => b.category === c) })).filter((x) => x.rows.length);
 
   return (
     <div style={{ overflow: "hidden" }}>
@@ -54,90 +51,14 @@ export default async function StatsLab() {
         </section>
       ) : null}
 
-      <section className="wrap sec">
+      <section id="explorer" className="wrap sec">
         <div className="sechead">
-          <div><div className="k gold" style={{ marginBottom: 12 }}>Lineup Lab</div><h2 className="h2">Five-man <span className="se" style={{ fontSize: "1.1em" }}>units</span></h2></div>
-          <span className="k muted">Min. 25 minutes together</span>
+          <div><div className="k gold" style={{ marginBottom: 12 }}>Explorer</div><h2 className="h2">Go get <span className="se" style={{ fontSize: "1.1em" }}>what you want</span></h2></div>
+          <span className="k muted">Every season since 1995 · every view has its own link</span>
         </div>
-        <div className="glass scroll" style={{ padding: "8px 22px" }}>
-          <table className="t">
-            <thead><tr><th>Unit</th><th>Min</th><th>Poss</th><th>Off rtg</th><th>Def rtg</th><th>Net</th></tr></thead>
-            <tbody>
-              {best5.map((u: any) => (
-                <tr key={u.group_id}><td>{u.name}</td><td>{Math.round(u.minutes)}</td><td>{fmt.int(u.possessions)}</td><td>{fmt.n1(u.off_rtg)}</td><td>{fmt.n1(u.def_rtg)}</td><td className="gold">{fmt.signed(u.net_rtg)}</td></tr>
-              ))}
-              {worst5.length ? <tr><td colSpan={6} className="k muted" style={{ paddingTop: 22 }}>Bleeding points</td></tr> : null}
-              {worst5.map((u: any) => (
-                <tr key={"w" + u.group_id}><td>{u.name}</td><td>{Math.round(u.minutes)}</td><td>{fmt.int(u.possessions)}</td><td>{fmt.n1(u.off_rtg)}</td><td>{fmt.n1(u.def_rtg)}</td><td style={{ color: "#B9A4F0" }}>{fmt.signed(u.net_rtg)}</td></tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {rot.length ? (
-        <section className="wrap sec">
-          <div className="sechead">
-            <div><div className="k gold" style={{ marginBottom: 12 }}>The 401 Report</div><h2 className="h2">Load <span className="se" style={{ fontSize: "1.1em" }}>&amp; efficiency</span></h2></div>
-            <span className="k muted">Rotation players · 18+ minutes</span>
-          </div>
-          <div className="glass scroll" style={{ padding: "8px 22px" }}>
-            <table className="t">
-              <thead><tr><th>Player</th><th>GP</th><th>MPG</th><th>Usage</th><th>Usage L5</th><th>TS%</th><th>TS% L5</th><th>Trend</th></tr></thead>
-              <tbody>
-                {rot.map((r: any) => (
-                  <tr key={r.full_name}>
-                    <td>{r.full_name}</td><td>{r.gp}</td><td>{fmt.n1(r.mpg)}</td><td>{fmt.n1(r.usg_season)}</td><td>{fmt.n1(r.usg_last5)}</td>
-                    <td>{fmt.n1(r.ts_season)}</td><td>{fmt.n1(r.ts_last5)}</td>
-                    <td style={{ color: Number(r.ts_delta) >= 0 ? "var(--gold)" : "#B9A4F0" }}>{fmt.signed(r.ts_delta)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
-
-      {legends.rows.length ? (
-        <section className="wrap sec">
-          <div className="sechead">
-            <div><div className="k gold" style={{ marginBottom: 12 }}>Same Age, Same Jersey</div><h2 className="h2">Barnes vs the <span className="se" style={{ fontSize: "1.1em" }}>greats</span></h2></div>
-            <span className="k muted">Each player&apos;s first {legends.games} regular-season games as a Raptor</span>
-          </div>
-          <div className="glass scroll" style={{ padding: "8px 22px", background: "linear-gradient(160deg, rgba(58,30,140,.35), rgba(14,12,18,.6))" }}>
-            <table className="t">
-              <thead><tr><th>Player</th><th>Games</th><th>PPG</th><th>RPG</th><th>APG</th><th>TS%</th></tr></thead>
-              <tbody>
-                {legends.rows.map((r: any) => (
-                  <tr key={r.full_name} style={r.full_name === "Scottie Barnes" ? { fontWeight: 700 } : undefined}>
-                    <td style={r.full_name === "Scottie Barnes" ? { color: "var(--gold)" } : undefined}>{r.full_name}</td>
-                    <td>{r.gp}</td><td>{fmt.n1(r.ppg)}</td><td>{fmt.n1(r.rpg)}</td><td>{fmt.n1(r.apg)}</td><td>{fmt.n1(r.ts_pct)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
-
-      <section id="records" className="wrap sec">
-        <div className="sechead">
-          <div><div className="k gold" style={{ marginBottom: 12 }}>ACC Archives</div><h2 className="h2">Record <span className="se" style={{ fontSize: "1.1em" }}>Book</span></h2></div>
-          <span className="k muted">Franchise regular-season leaders</span>
-        </div>
-        <div className="grid-auto" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))" }}>
-          {byCat.map(({ c, rows }) => (
-            <article key={c} className="glass lift" style={{ padding: 26 }}>
-              <div className="k gold" style={{ marginBottom: 10 }}>{rows[0].label}</div>
-              {rows.map((r) => (
-                <div key={r.rank} className="row" style={{ display: "grid", gridTemplateColumns: "26px minmax(0,1fr) auto", gap: 10, alignItems: "center", padding: "10px 6px", borderTop: r.rank > 1 ? "1px solid rgba(243,238,230,.07)" : "none" }}>
-                  <span className="se" style={{ fontSize: 22, lineHeight: 1, color: r.rank > 1 ? "var(--muted)" : undefined }}>{r.rank}</span>
-                  <span>{r.name}</span><span className="mono">{fmt.int(r.value)}</span>
-                </div>
-              ))}
-            </article>
-          ))}
-        </div>
+        <Suspense fallback={<p className="soft">Loading the explorer…</p>}>
+          <StatsExplorer seasons={seasons} />
+        </Suspense>
       </section>
 
       <Footer />

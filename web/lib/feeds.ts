@@ -52,7 +52,24 @@ export async function getNextGame(): Promise<NextGame | null> {
   }
 }
 
-export type Injury = { name: string; status: string; detail?: string };
+// The most recent completed Raptors game, if it ended within the last `hours`.
+export async function getRecentFinal(hours = 10): Promise<{ tipISO: string; dateET: string } | null> {
+  try {
+    const res = await fetch("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/tor/schedule", { cache: "no-store" });
+    if (!res.ok) return null;
+    const j: any = await res.json();
+    const now = Date.now();
+    const ev = (j?.events ?? [])
+      .filter((e: any) => e?.competitions?.[0]?.status?.type?.completed && now - Date.parse(e.date) < hours * 3600 * 1000 && Date.parse(e.date) < now)
+      .sort((a: any, b: any) => Date.parse(b.date) - Date.parse(a.date))[0];
+    if (!ev) return null;
+    return { tipISO: ev.date, dateET: new Date(ev.date).toLocaleDateString("en-CA", { timeZone: "America/Toronto" }) };
+  } catch {
+    return null;
+  }
+}
+
+export type Injury ={ name: string; status: string; detail?: string };
 
 export async function getInjuries(): Promise<Injury[]> {
   try {
