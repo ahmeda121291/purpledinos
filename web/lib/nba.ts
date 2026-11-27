@@ -56,7 +56,18 @@ const logParams = (season: string, seasonType: string): Record<string, string> =
   ShotClockRange: "", TeamID: TOR, VsConference: "", VsDivision: "", Season: season,
 });
 
+const dashParams = (season: string, extra: Record<string, string>): Record<string, string> => ({
+  College: "", Conference: "", Country: "", DateFrom: "", DateTo: "", Division: "", DraftPick: "", DraftYear: "", GameScope: "",
+  GameSegment: "", Height: "", ISTRound: "", LastNGames: "0", LeagueID: "00", Location: "", MeasureType: "Base", Month: "0",
+  OpponentTeamID: "0", Outcome: "", PORound: "0", PaceAdjust: "N", PerMode: "PerGame", Period: "0", PlayerExperience: "",
+  PlayerPosition: "", PlusMinus: "N", Rank: "N", Season: season, SeasonSegment: "", SeasonType: "Regular Season",
+  ShotClockRange: "", StarterBench: "", TeamID: "0", TwoWay: "0", VsConference: "", VsDivision: "", Weight: "", ...extra,
+});
+
 export const nba = {
+  leagueTeamsAdvanced: (season: string) => getJSON("leaguedashteamstats", dashParams(season, { MeasureType: "Advanced" })).then((j) => rows(j)),
+  raptorsPlayers: (season: string) => getJSON("leaguedashplayerstats", dashParams(season, { TeamID: TOR })).then((j) => rows(j)),
+  roster: (season: string) => getJSON("commonteamroster", { LeagueID: "00", Season: season, TeamID: TOR }).then((j) => rows(j)),
   yearByYear: () => getJSON("teamyearbyyearstats", { LeagueID: "00", PerMode: "Totals", SeasonType: "Regular Season", TeamID: TOR }).then((j) => rows(j)),
   gameFinder: (season: string) => getJSON("leaguegamefinder", { PlayerOrTeam: "T", TeamID: TOR, LeagueID: "00", Season: season }).then((j) => rows(j)),
   playerLogs: (season: string, type: string) => getJSON("playergamelogs", { ...logParams(season, type), PlayerID: "" }).then((j) => rows(j)),
