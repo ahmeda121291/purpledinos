@@ -143,7 +143,7 @@ function Compare({ v }: { v: any }) {
   );
 }
 
-const cell = (k: string, t: string) => (t === "text" ? { flex: 1 } : { width: k === "rank" ? 50 : t === "raw" ? 120 : 96 });
+const cell = (k: string, t: string) => (t === "text" ? { flex: 1 } : { width: k === "rank" ? 50 : k === "span" ? 190 : t === "raw" ? 120 : 96 });
 
 function Machine({ v }: { v: any }) {
   const Head = ({ x, right }: any) => (

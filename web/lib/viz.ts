@@ -169,7 +169,7 @@ export async function getViz(q: URLSearchParams): Promise<any> {
     const rows = (data as any[]) ?? [];
     const series = names.map((n) => {
       const list = rows.filter((r) => r.full_name === n && r[metric] != null);
-      return { name: n, pts: list.map((r, i) => ({ x: x === "age" ? Number(r.age ?? 0) : x === "year" ? i + 1 : Number(r.season_id.slice(0, 4)), label: x === "age" ? String(Math.round(Number(r.age ?? 0))) : x === "year" ? `Y${i + 1}` : `'${r.season_id.slice(2, 4)}`, y: Number(r[metric]) })) };
+      return { name: n, pts: list.map((r, i) => ({ x: x === "age" ? Number(r.age ?? 0) : x === "year" ? i + 1 : Number(r.season_id.slice(0, 4)), label: x === "age" ? `Age ${Math.round(Number(r.age ?? 0))}` : x === "year" ? `Year ${i + 1}` : r.season_id.slice(2), y: Number(r[metric]) })) };
     }).filter((s) => s.pts.length);
     return { kind, title: `${names.length === 1 ? names[0] + ": " : ""}${METRIC[metric].label}`, ctx: `Season by season, regular season · by ${x === "age" ? "age" : x === "year" ? "year as a Raptor" : "season"}`, series, fmt: fmtOf(metric) };
   }
