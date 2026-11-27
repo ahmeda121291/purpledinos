@@ -113,7 +113,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
                   {recent.map((g: any) => (
                     <tr key={g.game_id}>
                       <td><Link className="ul" href={`/grades/${g.game_id}`} style={{ color: "var(--ink)" }}>{day(g.game_date)} {g.is_home ? "vs" : "@"} {g.opponent_abbr}</Link> <span className="muted mono" style={{ fontSize: 12 }}>{g.wl}</span></td>
-                      <td>{Math.round(Number(g.minutes))}</td><td><b>{g.pts}</b></td><td>{g.reb}</td><td>{g.ast}</td><td>{g.fgm}/{g.fga}</td><td>{fmt.n1(g.ts_pct)}</td><td>{fmt.signed(g.plus_minus)}</td><td className="gold">{fmt.n1(g.game_score)}</td>
+                      <td>{Math.round(Number(g.minutes))}</td><td><b>{g.pts}</b></td><td>{g.reb}</td><td>{g.ast}</td><td>{g.fgm}/{g.fga}</td><td>{fmt.pct(g.ts_pct)}</td><td>{fmt.signed(g.plus_minus)}</td><td className="gold">{fmt.n1(g.game_score)}</td>
                       <td style={{ color: "#B9A4F0", fontWeight: 700 }}>{g.lab ?? "—"}</td><td className="gold" style={{ fontWeight: 700 }}>{g.fan ?? "—"}</td>
                     </tr>
                   ))}
