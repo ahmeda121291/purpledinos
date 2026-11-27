@@ -20,7 +20,7 @@ export default function GradesView({ g, history, latestId }: { g: any; history: 
           Raptors {game.team_pts}–{game.opp_pts} <span className="se" style={{ fontSize: "1.02em" }}>{game.is_home ? "vs" : "at"} {teamName(game.opponent_abbr)}</span>
         </h1>
         <p className="soft" style={{ maxWidth: "44em", fontSize: 17, margin: "16px 0 8px" }}>
-          {day(game.game_date)} · {game.wl === "W" ? "Win" : "Loss"}. The <b style={{ color: "#B9A4F0" }}>Lab grade</b> is pure numbers: Game Score, nudged by plus-minus, with anyone under 8 minutes marked incomplete. The <b className="gold">Fan grade</b> is yours. Grade every guy, then see where you and the numbers disagree.
+          {day(game.game_date)} · {game.wl === "W" ? "Win" : "Loss"}. The <b style={{ color: "#B9A4F0" }}>Lab grade</b> is pure numbers: Game Score, nudged by plus-minus, with anyone under 8 minutes marked incomplete. The <b className="gold">Fan consensus</b> is every fan&apos;s grade averaged together. Grade every guy, then see where you and the numbers disagree.
         </p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "20px 0 36px" }}>
           <a className="btn btn-g" href={`https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}>Share your grades on X</a>
@@ -30,7 +30,7 @@ export default function GradesView({ g, history, latestId }: { g: any; history: 
           {open ? (
             <>
               <span className="gb gb-fan" style={{ width: 44, height: 36, fontSize: 18 }}>B+</span>
-              <p style={{ margin: 0, flex: "1 1 280px", fontSize: 16 }}><b>Voting is open.</b> Tap a grade in the <b className="gold">Your grade</b> row under each player. You can change it until the next game. Your grade averages into the <b className="gold">Fans</b> grade next to the Lab&apos;s.</p>
+              <p style={{ margin: 0, flex: "1 1 280px", fontSize: 16 }}><b>Voting is open.</b> Tap a grade in the <b className="gold">Your grade</b> row under each player. You can change it until the next game. Your grade averages into the <b className="gold">Fan consensus</b> next to the Lab&apos;s.</p>
             </>
           ) : (
             <>

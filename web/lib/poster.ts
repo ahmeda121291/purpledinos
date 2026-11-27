@@ -24,6 +24,7 @@ type Candidate = { type: CardType; key: string; check?: (card: any) => string | 
 function replyFor(type: CardType, card: any): string | null {
   switch (type) {
     case "final": return `Grade the boys 🦖👇\n${utm("/grades", "final")}`;
+    case "gradesopen": return `Grade them here. Results drop tomorrow at noon 👇\n${utm("/grades", "gradesopen")}`;
     case "grades": return `Full report card, and your vote 👇\n${utm("/grades", "grades")}`;
     case "record": return `${card.data.lead.full_name}'s full Raptors résumé 👇\n${utm(playerHref(card.data.lead.full_name), "record")}`;
     case "report": return `Every Raptor's numbers, filter it however you want 👇\n${utm("/stats-lab", "report")}`;
@@ -80,6 +81,13 @@ export async function runPoster(db: any, origin: string) {
     const { data: g2 } = await db.from("games").select("game_id, game_date").order("game_date", { ascending: false }).limit(1).maybeSingle();
     if (g2 && g2.game_date === fin.dateET) cands.push({ type: "final", key: `final:${g2.game_id}` });
     else log.push("final: game not in database yet");
+  }
+
+  // Grades are open: a standalone call to vote, 30 min to 6 h after the Final went out.
+  const { data: fp } = await db.from("x_posts").select("dedupe_key, created_at, posted_at, status").like("dedupe_key", "final:%").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (fp && fp.status !== "failed") {
+    const age = Date.now() - Date.parse(fp.posted_at ?? fp.created_at);
+    if (age >= 30 * 60000 && age < 6 * 3600000) cands.push({ type: "gradesopen", key: `gradesopen:${String(fp.dedupe_key).slice(6)}` });
   }
 
   const next = await getNextGame();

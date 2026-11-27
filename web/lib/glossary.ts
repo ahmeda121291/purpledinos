@@ -9,7 +9,7 @@ export const GLOSSARY: Record<string, { name: string; text: string }> = {
   poss: { name: "Possessions", text: "How many trips down the floor the group played together. More possessions, more trustworthy numbers." },
   per36: { name: "Per 36", text: "Every stat scaled to 36 minutes, so bench guys and starters can be compared on the same footing." },
   lab: { name: "Lab grade", text: "Our grade, pure numbers: Game Score + 0.15 × plus-minus. A+ 24+, A 18+, B+ 14+, B 10.5+, C+ 7.5+, C 4.5+, D 1.5+, F below. Under 8 minutes is INC (incomplete)." },
-  fan: { name: "Fan grade", text: "The average of every fan's grade for that game, on a 4.3 scale (A+ = 4.3, F = 0)." },
+  fan: { name: "Fan consensus", text: "Every fan's grade for that player, averaged together on a 4.3 scale (A+ = 4.3, F = 0) and turned back into a letter." },
   tov: { name: "Turnover % (TOV%)", text: "Turnovers per 100 plays. Lower is better." },
   par3: { name: "3PA rate", text: "Share of field goal attempts taken from three." },
 };

@@ -4,12 +4,13 @@ import { fmt, getLastGame, getLegendComps, getLineups, getOnThisDay, getRecordWa
 import { getInjuries, getNextGame } from "./feeds";
 import { teamName } from "./teams";
 
-export const CARD_TYPES = ["gameday", "final", "grades", "record", "onthisday", "report", "lineup", "legends"] as const;
+export const CARD_TYPES = ["gameday", "final", "gradesopen", "grades", "record", "onthisday", "report", "lineup", "legends"] as const;
 export type CardType = (typeof CARD_TYPES)[number];
 
 export const CARD_META: Record<CardType, { name: string; when: string }> = {
   gameday: { name: "Game Day", when: "Game mornings, 10 AM" },
   final: { name: "Final", when: "About 15 min after the buzzer" },
+  gradesopen: { name: "Grades Are Open", when: "30–45 min after the Final" },
   grades: { name: "Jurassic Park Grades", when: "Noon the day after a game" },
   record: { name: "Record Watch", when: "When someone gets close, and the moment a record falls" },
   onthisday: { name: "On This Day", when: "Daily, 12 PM" },
@@ -44,6 +45,20 @@ export async function getCard(type: CardType): Promise<Card> {
       const won = g.wl === "W";
       const caption = `FINAL: Raptors ${g.team_pts}, ${teamName(g.opponent_abbr)} ${g.opp_pts}. ${s ? `${s.full_name}: ${s.pts}/${s.reb}/${s.ast} on ${fmt.pct(s.ts_pct)} TS.` : ""} ${won ? "Dub. 🦖" : "On to the next one."}`;
       return { type, caption, data: { ...g, opponent: teamName(g.opponent_abbr), date: longDate(g.game_date), top: last.top } };
+    }
+    case "gradesopen": {
+      const g = await getLatestGrades();
+      if (!g) return null;
+      const rows = g.rows.filter((r: any) => r.lab !== "INC").slice(0, 8);
+      if (!rows.length) return null;
+      const order = ["A+", "A", "B+", "B", "C+", "C", "D", "F"];
+      const topScorer = [...rows].sort((a: any, b: any) => b.pts - a.pts)[0];
+      const starters = [...rows].sort((a: any, b: any) => Number(b.minutes) - Number(a.minutes)).slice(0, 5);
+      const harsh = [...starters].sort((a: any, b: any) => order.indexOf(b.lab) - order.indexOf(a.lab))[0];
+      const hook = order.indexOf(topScorer.lab) >= 2 ? topScorer : harsh;
+      const vs = `${g.game.is_home ? "vs" : "at"} ${teamName(g.game.opponent_abbr)}`;
+      const caption = `GRADES ARE OPEN 🦖 The Lab gave ${hook.full_name} a${/^[AF]/.test(hook.lab) ? "n" : ""} ${hook.lab} ${vs} (${hook.pts} pts, ${hook.fgm}/${hook.fga} FG, ${Number(hook.plus_minus) > 0 ? "+" : ""}${hook.plus_minus}). Agree? Grade every Raptor from tonight 👇`;
+      return { type, caption, data: { game: { ...g.game, opponent: teamName(g.game.opponent_abbr), date: longDate(g.game.game_date) }, rows, voters: 0, open: true } };
     }
     case "grades": {
       const g = await getLatestGrades();

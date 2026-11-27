@@ -63,6 +63,7 @@ function render(type: CardType, d: any) {
           </div>
         </Frame>
       );
+    case "gradesopen":
     case "grades": {
       const Badge = ({ g, fan }: any) => (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 62, height: 50, borderRadius: 14, fontWeight: 800, fontSize: 28,
@@ -70,13 +71,13 @@ function render(type: CardType, d: any) {
           border: fan ? "none" : "1.5px solid rgba(168,139,248,.6)" }}>{g ?? "–"}</div>
       );
       return (
-        <Frame label="Jurassic Park Grades">
+        <Frame label={d.open ? "Grades are open" : "Jurassic Park Grades"}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
               <span style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1.5 }}>Raptors {d.game.team_pts}–{d.game.opp_pts}</span>
               <Serif size={40}>{d.game.is_home ? "vs" : "at"} {d.game.opponent}</Serif>
             </div>
-            <div style={{ display: "flex", gap: 22 }}><K size={15} color={LILAC}>Lab</K><K size={15}>Fans{d.voters ? ` · ${d.voters}` : ""}</K></div>
+            <div style={{ display: "flex", gap: 22 }}><K size={15} color={LILAC}>Lab</K><K size={15}>{d.open ? "You?" : `Fan consensus${d.voters ? ` · ${d.voters}` : ""}`}</K></div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", columnGap: 28 }}>
             {d.rows.map((r: any) => (
@@ -86,7 +87,7 @@ function render(type: CardType, d: any) {
                   <span style={{ fontFamily: MONO, fontSize: 15, color: MUTED, whiteSpace: "nowrap" }}>{r.pts} PTS · {r.reb} REB · {r.ast} AST · {Number(r.plus_minus) > 0 ? "+" : ""}{r.plus_minus}</span>
                 </div>
                 <Badge g={r.lab} />
-                <Badge g={r.fan} fan />
+                <Badge g={d.open ? "?" : r.fan} fan />
               </div>
             ))}
           </div>

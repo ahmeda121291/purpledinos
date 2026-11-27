@@ -107,10 +107,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
 
         {recent.length && p.is_active ? (
           <section className="wrap sec">
-            <div className="sechead"><h2 className="h2">Last <span className="se" style={{ fontSize: "1.1em" }}>10 games</span></h2><span className="k muted">With Lab and fan grades</span></div>
+            <div className="sechead"><h2 className="h2">Last <span className="se" style={{ fontSize: "1.1em" }}>10 games</span></h2><span className="k muted">With Lab grade and fan consensus</span></div>
             <div className="glass scroll" style={{ padding: "8px 22px" }}>
               <table className="t">
-                <thead><tr><th>Game</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>FG</th><th>TS%<Tip term="ts" /></th><th>+/-<Tip term="pm" /></th><th>GmSc<Tip term="gmsc" /></th><th>Lab<Tip term="lab" /></th><th>Fans<Tip term="fan" /></th></tr></thead>
+                <thead><tr><th>Game</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>FG</th><th>TS%<Tip term="ts" /></th><th>+/-<Tip term="pm" /></th><th>GmSc<Tip term="gmsc" /></th><th>Lab<Tip term="lab" /></th><th>Consensus<Tip term="fan" /></th></tr></thead>
                 <tbody>
                   {recent.map((g: any) => (
                     <tr key={g.game_id}>

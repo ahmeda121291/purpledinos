@@ -53,7 +53,7 @@ export default function GradeBoard({ gameId, rows: initial, open }: { gameId: st
     <div>
       {open ? (
         <div className="k muted" style={{ marginBottom: 16, fontSize: 11 }} aria-live="polite">
-          {done ? <><span className="gold">{done}/{total}</span> graded · change any grade until voting closes</> : "Tap a grade under each player. Lab = the numbers. Fans = everyone's average. You = yours."}
+          {done ? <><span className="gold">{done}/{total}</span> graded · change any grade until voting closes</> : "Tap a grade under each player. Lab = the numbers. Fan consensus = every fan's average. You = yours."}
           {msg ? <span style={{ color: "#E5484D", marginLeft: 10 }}>{msg}</span> : null}
         </div>
       ) : null}
@@ -79,7 +79,8 @@ export default function GradeBoard({ gameId, rows: initial, open }: { gameId: st
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                     <GradeBadge g={r.fan} kind="fan" size={50} />
-                    <span className="k gold" style={{ fontSize: 10 }}>Fans{Number(r.votes) ? ` · ${r.votes}` : ""}<Tip term="fan" /></span>
+                    <span className="k gold" style={{ fontSize: 10, whiteSpace: "nowrap" }}>Fan consensus<Tip term="fan" /></span>
+                    <span className="mono muted" style={{ fontSize: 10 }}>{Number(r.votes) ? `${r.votes} vote${Number(r.votes) === 1 ? "" : "s"}` : "no votes yet"}</span>
                   </div>
                   {open && !inc ? (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
@@ -91,7 +92,7 @@ export default function GradeBoard({ gameId, rows: initial, open }: { gameId: st
               </div>
               {Math.abs(diff) >= 2 ? (
                 <p className="soft" style={{ margin: "12px 0 0", fontSize: 14 }}>
-                  {diff > 0 ? "Fans are higher on him than the numbers." : "The numbers like him more than you do."}
+                  {diff > 0 ? "The fan consensus is higher on him than the numbers." : "The numbers like him more than the fans do."}
                 </p>
               ) : null}
               {open && !inc ? (
