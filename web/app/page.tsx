@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
+import PostCard, { type FeedPost } from "@/components/PostCard";
 import { Header, Footer, X_URL } from "@/components/Chrome";
 import Countdown from "@/components/Countdown";
 import { fmt, getCurrentSeason, getLastGame, getLineups, getOnThisDay, getRecordBook, getRecordWatch, getSeasonPulse, getTrendReport } from "@/lib/data";
 import { getHeadlines, getInjuries, getNextGame, timeAgo } from "@/lib/feeds";
 import { teamName } from "@/lib/teams";
+import { db } from "@/lib/supabase";
 import { playerHref } from "@/lib/slug";
 import { getLatestGrades } from "@/lib/cards";
 import { GradeBadge } from "@/components/GradeBoard";
@@ -27,6 +29,8 @@ export default async function Home() {
     getNextGame(), getInjuries(), getSeasonPulse(), getLastGame(), getTrendReport(), getRecordWatch(8),
     getLineups(3, 60, 4), getOnThisDay(), getRecordBook(1), getHeadlines(6), getCurrentSeason(), getLatestGrades().catch(() => null),
   ]);
+  const { data: feedRows } = await db.from("v_feed").select("*").gte("created_at", new Date(Date.now() - 36 * 3600000).toISOString()).order("score", { ascending: false }).limit(4);
+  const feed = (feedRows as FeedPost[]) ?? [];
 
   const sp = pulse.find((p: any) => p.span === "season");
   const l10 = pulse.find((p: any) => p.span === "last10");
@@ -250,17 +254,30 @@ export default async function Home() {
         </div>
       </section>
 
-      {news.length ? (
+      {news.length || feed.length ? (
         <section id="news" className="wrap sec">
-          <div className="k gold" style={{ marginBottom: 12 }}>03 — The wire</div>
-          <h2 className="h2" style={{ marginBottom: 24 }}>Latest</h2>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {news.map((h, i) => (
-              <a key={h.url} className="row" href={h.url} rel="noopener" target="_blank" style={{ display: "grid", gridTemplateColumns: "minmax(110px,180px) minmax(0,1fr)", gap: 16, alignItems: "baseline", padding: "22px 10px", borderTop: "1px solid rgba(243,238,230,.12)", borderBottom: i === news.length - 1 ? "1px solid rgba(243,238,230,.12)" : undefined, textDecoration: "none", color: "var(--ink)" }}>
-                <span className="k gold">{h.source}</span>
-                <span><span style={{ display: "block", fontWeight: 600, fontSize: 20, letterSpacing: "-.015em", lineHeight: 1.25 }}>{h.title}</span><span className="k muted" style={{ fontSize: 11 }}>{timeAgo(h.published)}</span></span>
-              </a>
-            ))}
+          <div className="sechead" style={{ marginBottom: 24 }}>
+            <div>
+              <div className="k gold" style={{ marginBottom: 12 }}>03 — The wire</div>
+              <h2 className="h2">Raptors Twitter, <span className="se" style={{ fontSize: "1.1em" }}>today</span></h2>
+            </div>
+            <Link href="/feed" className="btn btn-o" style={{ minHeight: 48, padding: "0 22px" }}>Open the full feed →</Link>
+          </div>
+          <div className="wire">
+            <div className="wire-posts">
+              {feed.map((p) => <PostCard key={p.id} p={p} compact />)}
+            </div>
+            {news.length ? (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span className="k muted" style={{ marginBottom: 6 }}>Headlines</span>
+                {news.map((h, i) => (
+                  <a key={h.url} className="row" href={h.url} rel="noopener" target="_blank" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 8px", borderTop: "1px solid rgba(243,238,230,.12)", borderBottom: i === news.length - 1 ? "1px solid rgba(243,238,230,.12)" : undefined, textDecoration: "none", color: "var(--ink)" }}>
+                    <span className="k gold" style={{ fontSize: 11 }}>{h.source} · <span className="muted">{timeAgo(h.published)}</span></span>
+                    <span style={{ fontWeight: 600, fontSize: 18, letterSpacing: "-.015em", lineHeight: 1.25 }}>{h.title}</span>
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}

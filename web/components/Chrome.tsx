@@ -3,7 +3,7 @@ import { LogoMark, Wordmark } from "./Logo";
 
 export const X_URL = "https://x.com/PurpleDinosTO";
 
-export function Header({ active }: { active: "home" | "lab" | "players" | "grades" | "none" }) {
+export function Header({ active }: { active: "home" | "lab" | "players" | "grades" | "feed" | "none" }) {
   return (
     <header className="hdr">
       <div className="wrap" style={{ paddingTop: 12, paddingBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px 24px", flexWrap: "wrap" }}>
@@ -16,6 +16,7 @@ export function Header({ active }: { active: "home" | "lab" | "players" | "grade
           <Link className={`nl ${active === "lab" ? "on" : ""}`} aria-current={active === "lab" ? "page" : undefined} href="/stats-lab">Stats Lab</Link>
           <Link className={`nl ${active === "players" ? "on" : ""}`} aria-current={active === "players" ? "page" : undefined} href="/players">Players</Link>
           <Link className={`nl ${active === "grades" ? "on" : ""}`} aria-current={active === "grades" ? "page" : undefined} href="/grades">Grades</Link>
+          <Link className={`nl ${active === "feed" ? "on" : ""}`} aria-current={active === "feed" ? "page" : undefined} href="/feed">Feed</Link>
           <Link className="nl" href="/#archives">Archives</Link>
         </nav>
         <a className="btn btn-o" href={X_URL} style={{ minHeight: 44, padding: "0 20px", fontSize: 14 }}>Follow @PurpleDinosTO</a>
@@ -37,7 +38,7 @@ export function Footer() {
           <Link className="nl" href="/players">Players</Link>
           <Link className="nl" href="/grades">Grades</Link>
           <Link className="nl" href="/#archives">Archives</Link>
-          <Link className="nl" href="/#news">News</Link>
+          <Link className="nl" href="/feed">Feed</Link>
           <a className="nl" href={X_URL} style={{ color: "var(--gold)" }}>@PurpleDinosTO</a>
         </nav>
       </div>

@@ -86,3 +86,25 @@ export async function xDelete(id: string) {
   if (!res.ok) throw new Error(`X delete failed ${res.status}: ${JSON.stringify(body).slice(0, 200)}`);
   return Boolean(body?.data?.deleted);
 }
+
+// Signed GET (OAuth 1.0a user context). Query params are part of the signature.
+export async function xGet(path: string, query: Record<string, string> = {}) {
+  const url = `${API}${path}`;
+  const qs = new URLSearchParams(query).toString();
+  const res = await fetch(qs ? `${url}?${qs}` : url, { headers: { Authorization: oauthHeader("GET", url, query) }, cache: "no-store" });
+  const body: any = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`X GET ${path} ${res.status}: ${JSON.stringify(body).slice(0, 300)}`);
+  return body;
+}
+
+export async function xRepost(myId: string, tweetId: string) {
+  const url = `${API}/2/users/${myId}/retweets`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: oauthHeader("POST", url), "Content-Type": "application/json" },
+    body: JSON.stringify({ tweet_id: tweetId }),
+  });
+  const body: any = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`X repost failed ${res.status}: ${JSON.stringify(body).slice(0, 300)}`);
+  return body?.data as { retweeted: boolean };
+}

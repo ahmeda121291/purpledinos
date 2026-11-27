@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { monthSpendAll } from "@/lib/feed";
 import type { Metadata } from "next";
 import { Header, Footer } from "@/components/Chrome";
 import { LogoMark } from "@/components/Logo";
@@ -17,10 +18,10 @@ export default async function Queue() {
     db.from("app_settings").select("value").eq("key", "posting_mode").maybeSingle(),
     db.from("job_runs").select("job, status, started_at, detail").eq("job", "poster").order("started_at", { ascending: false }).limit(1),
     db.from("job_runs").select("job, status, started_at, detail").gte("started_at", new Date(Date.now() - 2 * 86400000).toISOString()).order("started_at", { ascending: false }).limit(300),
-    db.from("x_posts").select("cost").gte("posted_at", monthStart.toISOString()),
+    monthSpendAll(db).then((v) => ({ data: v })),
     db.from("app_settings").select("value").eq("key", "x_budget_month").maybeSingle(),
   ]);
-  const spent = ((spendRows as any[]) ?? []).reduce((a, r) => a + Number(r.cost ?? 0), 0);
+  const spent = Number(spendRows ?? 0);
   const h = (health as any[]) ?? [];
   const lastOk = (job: string) => h.find((r) => r.job === job && r.status === "ok")?.started_at as string | undefined;
   const errors = h.filter((r) => r.status !== "ok" && r.status !== "running" && Date.now() - Date.parse(r.started_at) < 86400000);

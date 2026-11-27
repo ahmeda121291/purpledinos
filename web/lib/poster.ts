@@ -5,6 +5,7 @@ import { runIngest } from "./ingest";
 import { xPost, xUploadImage } from "./x";
 import { playerHref, utm } from "./slug";
 import { overUnder, careerHighs } from "./social";
+import { monthSpendAll } from "./feed";
 
 const TZ = "America/Toronto";
 function torontoNow() {
@@ -36,11 +37,7 @@ function linkReply(type: CardType, card: any): string | null {
 }
 const COST = { post: 0.015, link: 0.2 };
 
-async function monthSpend(db: any) {
-  const start = new Date(); start.setUTCDate(1); start.setUTCHours(0, 0, 0, 0);
-  const { data } = await db.from("x_posts").select("cost").gte("posted_at", start.toISOString());
-  return ((data as any[]) ?? []).reduce((a, r) => a + Number(r.cost ?? 0), 0);
-}
+const monthSpend = (db: any) => monthSpendAll(db);
 async function budget(db: any) {
   const { data } = await db.from("app_settings").select("value").eq("key", "x_budget_month").maybeSingle();
   return Number(data?.value ?? 20) || 20;
