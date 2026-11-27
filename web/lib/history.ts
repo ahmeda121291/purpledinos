@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { currentSeason, nba, slim } from "./nba";
+import { currentSeason, nba, slim, TOR } from "./nba";
 
 const seasonId = (y: number) => `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -44,8 +44,11 @@ export async function syncOpponents(db: any, season: string) {
   let n = 0;
   for (const type of ["Regular Season", "Playoffs"]) {
     const logs = await nba.oppLogs(season, type).catch(() => [] as any[]);
-    const rows = logs.filter((r: any) => ids.has(r.GAME_ID)).map((r: any) => ({ game_id: r.GAME_ID, team_side: "OPP", traditional: { ...slim(r), TEAM_ABBREVIATION: r.TEAM_ABBREVIATION } }));
-    for (let i = 0; i < rows.length; i += 100) await db.from("team_game_box").upsert(rows.slice(i, i + 100), { onConflict: "game_id,team_side" });
+    const rows = logs.filter((r: any) => ids.has(r.GAME_ID) && String(r.TEAM_ID) !== TOR).map((r: any) => ({ game_id: r.GAME_ID, team_side: "OPP", traditional: { ...slim(r), TEAM_ABBREVIATION: r.TEAM_ABBREVIATION } }));
+    for (let i = 0; i < rows.length; i += 100) {
+      const { error } = await db.from("team_game_box").upsert(rows.slice(i, i + 100), { onConflict: "game_id,team_side" });
+      if (error) throw new Error(error.message);
+    }
     n += rows.length;
   }
   return n;
