@@ -99,6 +99,74 @@ export async function getViz(q: URLSearchParams): Promise<any> {
     return { kind, title: `First ${n >= 9999 ? "all" : n} games as a Raptor`, ctx: "Same number of games for everyone", rows };
   }
 
+  if (kind === "machine") {
+    const cur = await currentSeason();
+    const a = q.get("a") || "Scottie Barnes", as = q.get("as") || cur, b = q.get("b") || "Chris Bosh", bs = q.get("bs") || "2009-10";
+    const era = q.get("era") === "1", same = q.get("same") !== "0";
+    const { data: ps } = await db.from("v_player_seasons").select("player_id, full_name, season_id, gp").in("full_name", [a, b]);
+    const A = ((ps as any[]) ?? []).find((r) => r.full_name === a && r.season_id === as), B = ((ps as any[]) ?? []).find((r) => r.full_name === b && r.season_id === bs);
+    if (!A || !B) return { kind: "error", title: "Season not found", ctx: `${a} ${as} vs ${b} ${bs}` };
+    const cap = same ? Math.min(A.gp, B.gp) : null;
+    const [x, y] = await Promise.all([db.rpc("player_season_line", { p_id: A.player_id, p_season: as, p_cap: cap }), db.rpc("player_season_line", { p_id: B.player_id, p_season: bs, p_cap: cap })]);
+    const L = ((x.data as any[]) ?? [])[0], R = ((y.data as any[]) ?? [])[0];
+    const defs: [string, string, string?, boolean?][] = [["ppg", "Points", "adj_ppg"], ["rpg", "Rebounds", "adj_rpg"], ["apg", "Assists", "adj_apg"], ["spg", "Steals", "adj_spg"], ["bpg", "Blocks", "adj_bpg"],
+      ["ts_pct", "True shooting %", "adj_ts"], ["rel_ts", "TS vs league"], ["usg_pct", "Usage %"], ["gmsc", "Game Score"], ["pts_share", "Share of team pts"], ["team_net", "Team net rating"]];
+    const rows = defs.map(([k, label, adj]) => { const kk = era && adj ? adj : k; return { label, l: Number(L?.[kk]), r: Number(R?.[kk]), signed: k === "rel_ts" || k === "team_net" }; });
+    return { kind, title: `${a} ${as.slice(2)} vs ${b} ${bs.slice(2)}`, ctx: `${cap ? `First ${cap} games of each season` : "Full seasons"} · ${era ? "era-adjusted to today's league" : "as played"}`, L, R, rows };
+  }
+
+  if (kind === "best") {
+    const m = q.get("bm") || "ppg", era = q.get("era") === "1";
+    const { data } = await db.rpc("best_seasons", { p_metric: m, p_era: era, p_min_gp: Number(q.get("bmin") || 41), p_limit: 10 });
+    const ADJ: Record<string, string> = { ppg: "adj_ppg", rpg: "adj_rpg", apg: "adj_apg", spg: "adj_spg", bpg: "adj_bpg", fg3pg: "adj_fg3pg", ts_pct: "adj_ts" };
+    const LBL: Record<string, string> = { ppg: "Points", rpg: "Rebounds", apg: "Assists", spg: "Steals", bpg: "Blocks", fg3pg: "Threes", ts_pct: "True shooting", rel_ts: "TS vs league", usg_pct: "Usage", gmsc: "Game Score", pts_share: "Team pts share", pm: "Plus-minus" };
+    const key = era && ADJ[m] ? ADJ[m] : m;
+    const rows = ((data as any[]) ?? []).map((r, i) => ({ ...r, rank: i + 1, name: r.full_name, val: r[key] }));
+    return { kind: "table", title: `Best Raptors seasons: ${LBL[m] ?? m}`, ctx: era ? "Era-adjusted to today's league · regular season" : "As played · regular season", sort: "val",
+      cols: [["rank", "#", "int"], ["name", "Player", "text"], ["season_id", "Season", "raw"], ["gp", "GP", "int"], ["val", LBL[m] ?? m, m === "pm" || m === "rel_ts" ? "signed" : "1"], ["ppg", "PPG", "1"], ["ts_pct", "TS%", "1"]], rows };
+  }
+
+  if (kind === "teams") {
+    const cur = await currentSeason();
+    let n = Number(q.get("tn") || 0);
+    if (!n) { const { count } = await db.from("v_team_games").select("game_id", { count: "exact", head: true }).eq("season_id", cur).eq("season_type", "Regular Season"); n = count || 82; }
+    const sort = q.get("tsort") || "net";
+    const { data } = await db.rpc("team_seasons", { p_games: n });
+    const rows = ((data as any[]) ?? []).map((r) => ({ ...r, name: r.season_id === cur ? `${r.season_id} ← now` : r.season_id, rec: `${r.w}–${r.l}` }))
+      .sort((a: any, b: any) => (sort === "drtg" ? Number(a[sort]) - Number(b[sort]) : Number(b[sort]) - Number(a[sort])));
+    const curIdx = rows.findIndex((r: any) => r.season_id === cur);
+    const top = rows.slice(0, 10);
+    if (curIdx >= 10) top[9] = rows[curIdx];
+    return { kind: "table", title: `Best Raptors starts through ${n} games`, ctx: `Ranked by ${sort === "net" ? "net rating" : sort}${curIdx >= 0 ? ` · this team ranks #${curIdx + 1} of ${rows.length}` : ""}`, sort,
+      cols: [["name", "Season", "text"], ["rec", "Record", "raw"], ["ortg", "Off", "1"], ["drtg", "Def", "1"], ["net", "Net", "signed"], ["pace", "Pace", "1"], ["ts_pct", "TS%", "1"]], rows: top, highlight: cur };
+  }
+
+  if (kind === "similar") {
+    const cur = await currentSeason();
+    const name = q.get("sp") || "Scottie Barnes", season = q.get("ss") || cur;
+    const { data: me } = await db.from("v_player_seasons").select("player_id").eq("full_name", name).eq("season_id", season).maybeSingle();
+    if (!me) return { kind: "error", title: "Season not found", ctx: `${name} ${season}` };
+    const { data } = await db.rpc("similar_seasons", { p_id: (me as any).player_id, p_season: season, p_limit: 8 });
+    const rows = ((data as any[]) ?? []).map((r) => ({ ...r, name: r.full_name, m: `${r.match}%` }));
+    return { kind: "table", title: `Seasons most like ${name} ${season}`, ctx: "Era-adjusted per-36 profile · Raptors seasons since 1995", sort: "m",
+      cols: [["name", "Player", "text"], ["season_id", "Season", "raw"], ["m", "Match", "raw"], ["ppg", "PPG", "1"], ["rpg", "RPG", "1"], ["apg", "APG", "1"], ["ts_pct", "TS%", "1"], ["usg_pct", "USG%", "1"]], rows };
+  }
+
+  if (kind === "arc") {
+    const names = (q.get("players") || "Scottie Barnes,Vince Carter,DeMar DeRozan,Kyle Lowry").split(",").filter(Boolean).slice(0, 4);
+    const am = q.get("am") || "pts";
+    const { data } = await db.rpc("career_arc", { p_names: names });
+    const by = new Map<string, any[]>();
+    for (const r of (data as any[]) ?? []) by.set(r.full_name, [...(by.get(r.full_name) ?? []), r]);
+    const series = names.filter((n) => by.has(n)).map((n) => {
+      const g = by.get(n)!;
+      const vals = am === "gmsc" ? g.map((_, i) => { const w = g.slice(Math.max(0, i - 19), i + 1); return w.reduce((a, b) => a + Number(b.game_score), 0) / w.length; }) : g.map((r) => Number(r[`cum_${am}`]));
+      return { name: n, vals };
+    });
+    const LBL: Record<string, string> = { pts: "Career points as a Raptor", reb: "Career rebounds as a Raptor", ast: "Career assists as a Raptor", gmsc: "Game Score, 20-game average" };
+    return { kind, title: LBL[am] ?? LBL.pts, ctx: "Regular season, by game number", series };
+  }
+
   // table: mirrors the explorer's URL params
   const tab = q.get("tab") || "players";
   if (tab === "lineups") {

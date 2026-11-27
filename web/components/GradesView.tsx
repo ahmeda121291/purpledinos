@@ -6,7 +6,7 @@ import { teamName } from "@/lib/teams";
 
 const day = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
-export default function GradesView({ g, history, latestId }: { g: any; history: any[]; latestId: string }) {
+export default function GradesView({ g, history, latestId, jerseys = {} }: { g: any; history: any[]; latestId: string; jerseys?: Record<string, string> }) {
   const game = g.game;
   const open = game.game_id === latestId;
   const shareText = `Grading the Raptors ${game.is_home ? "vs" : "at"} ${teamName(game.opponent_abbr)} on @PurpleDinosTO 🦖 What did you give them?`;
@@ -41,7 +41,7 @@ export default function GradesView({ g, history, latestId }: { g: any; history: 
         </div>
         <div className="grades-layout">
           <div style={{ minWidth: 0 }}>
-            <GradeBoard gameId={game.game_id} rows={g.rows} open={open} />
+            <GradeBoard gameId={game.game_id} rows={g.rows} open={open} jerseys={jerseys} />
           </div>
           <aside className="glass" style={{ padding: 24 }}>
             <h2 style={{ margin: "0 0 14px", fontSize: 22, fontWeight: 800 }}>Past report cards</h2>

@@ -142,7 +142,73 @@ function Compare({ v }: { v: any }) {
   );
 }
 
-const cell = (k: string, t: string) => (t === "text" ? { flex: 1 } : { width: k === "rank" ? 50 : 96 });
+const cell = (k: string, t: string) => (t === "text" ? { flex: 1 } : { width: k === "rank" ? 50 : t === "raw" ? 120 : 96 });
+
+function Machine({ v }: { v: any }) {
+  const Head = ({ x, right }: any) => (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: right ? "flex-end" : "flex-start", width: 330 }}>
+      <span style={{ fontSize: 28, fontWeight: 800, color: right ? INK : GOLD }}>{x?.full_name}</span>
+      <span style={{ fontFamily: MONO, fontSize: 16, color: MUTED }}>{x?.season_id} · age {x?.age ? Math.round(Number(x.age)) : "—"} · {x?.gp} GP</span>
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 6 }}><Head x={v.L} /><K size={16} color={SOFT}>vs</K><Head x={v.R} right /></div>
+      {v.rows.map((r: any) => {
+        const lw = r.label === "Turnovers" ? r.l < r.r : r.l > r.r, rw = r.label === "Turnovers" ? r.r < r.l : r.r > r.l;
+        const tot = Math.abs(r.l) + Math.abs(r.r) || 1;
+        const fmtv = (x: number) => (Number.isNaN(x) ? "—" : r.signed ? f(x, "signed") : f(x));
+        return (
+          <div key={r.label} style={{ display: "flex", alignItems: "center", height: 31, gap: 14 }}>
+            <span style={{ width: 90, fontFamily: MONO, fontSize: 21, color: lw ? GOLD : SOFT, fontWeight: lw ? 800 : 400 }}>{fmtv(r.l)}</span>
+            <div style={{ display: "flex", flex: 1, alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}><div style={{ display: "flex", width: `${(Math.abs(r.l) / tot) * 100}%`, height: 10, borderRadius: 5, background: lw ? GOLD : "rgba(217,184,120,.3)" }} /></div>
+              <span style={{ width: 210, textAlign: "center", display: "flex", justifyContent: "center", fontFamily: MONO, fontSize: 14, letterSpacing: 2, color: MUTED }}>{r.label.toUpperCase()}</span>
+              <div style={{ display: "flex", flex: 1 }}><div style={{ display: "flex", width: `${(Math.abs(r.r) / tot) * 100}%`, height: 10, borderRadius: 5, background: rw ? "#9A72F5" : "rgba(154,114,245,.3)" }} /></div>
+            </div>
+            <span style={{ width: 90, textAlign: "right", display: "flex", justifyContent: "flex-end", fontFamily: MONO, fontSize: 21, color: rw ? "#B9A4F0" : SOFT, fontWeight: rw ? 800 : 400 }}>{fmtv(r.r)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Arc({ v }: { v: any }) {
+  const PW = 1020, PH = 320;
+  const all = v.series.flatMap((s: any) => s.vals) as number[];
+  if (!all.length) return <div style={{ display: "flex", fontSize: 28 }}>No games found.</div>;
+  const maxN = Math.max(...v.series.map((s: any) => s.vals.length)), hi = Math.max(...all), lo = Math.min(0, ...all);
+  const X = (i: number) => (i / Math.max(1, maxN - 1)) * PW, Y = (y: number) => PH - ((y - lo) / Math.max(1e-6, hi - lo)) * PH;
+  const pts = (vals: number[]) => { const step = Math.max(1, Math.ceil(vals.length / 220)); return vals.filter((_, i) => i % step === 0 || i === vals.length - 1).map((y, j, arr) => `${X(j === arr.length - 1 ? vals.length - 1 : j * step).toFixed(1)},${Y(y).toFixed(1)}`).join(" "); };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 24 }}>
+        {v.series.map((s: any, i: number) => (
+          <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", width: 14, height: 14, borderRadius: 7, background: COLORS[i] }} />
+            <span style={{ fontSize: 19, fontWeight: 700 }}>{s.name}</span>
+            <span style={{ fontFamily: MONO, fontSize: 16, color: MUTED }}>{f(s.vals[s.vals.length - 1], v.title.startsWith("Game") ? "1" : "int")} · {s.vals.length} GP</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: PH, width: 60, alignItems: "flex-end" }}>
+          {[hi, (hi + lo) / 2, lo].map((t, i) => <span key={i} style={{ fontFamily: MONO, fontSize: 14, color: MUTED }}>{f(t, v.title.startsWith("Game") ? "1" : "int")}</span>)}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <svg width={PW} height={PH} viewBox={`0 0 ${PW} ${PH}`}>
+            <line x1="0" y1={PH / 2} x2={PW} y2={PH / 2} stroke="rgba(243,238,230,.08)" strokeWidth="1" />
+            {v.series.map((s: any, i: number) => <polyline key={s.name} points={pts(s.vals)} fill="none" stroke={COLORS[i]} strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />)}
+          </svg>
+          <div style={{ display: "flex", justifyContent: "space-between", width: PW, marginTop: 6 }}>
+            {[1, Math.round(maxN / 2), maxN].map((g) => <span key={g} style={{ fontFamily: MONO, fontSize: 14, color: MUTED }}>Game {g}</span>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Table({ v }: { v: any }) {
   return (
@@ -153,11 +219,11 @@ function Table({ v }: { v: any }) {
         ))}
       </div>
       {v.rows.map((r: any, i: number) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", height: 35, borderBottom: "1px solid rgba(243,238,230,.07)", background: i === 0 ? "rgba(107,63,212,.14)" : "transparent" }}>
+        <div key={i} style={{ display: "flex", alignItems: "center", height: 35, borderBottom: "1px solid rgba(243,238,230,.07)", background: (v.highlight ? r.season_id === v.highlight : i === 0) ? "rgba(107,63,212,.22)" : "transparent" }}>
           {v.cols.map(([k, , t]: any) => (
             <span key={k} style={{ display: "flex", justifyContent: t === "text" ? "flex-start" : "flex-end", ...cell(k, t),
               ...(t === "text" ? {} : { fontFamily: MONO }), fontSize: t === "text" ? 21 : 20, fontWeight: k === v.sort || (t === "text" && i === 0) ? 800 : t === "text" ? 600 : 400,
-              color: k === v.sort ? GOLD : INK, overflow: "hidden", whiteSpace: "nowrap" }}>{t === "text" ? String(r[k] ?? "") : f(r[k], t)}</span>
+              color: k === v.sort ? GOLD : INK, overflow: "hidden", whiteSpace: "nowrap" }}>{t === "text" || t === "raw" ? String(r[k] ?? "") : f(r[k], t)}</span>
           ))}
         </div>
       ))}
@@ -168,7 +234,7 @@ function Table({ v }: { v: any }) {
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams;
   const v = await getViz(q).catch((e) => ({ kind: "error", title: "Couldn't build that chart", ctx: String(e?.message ?? e).slice(0, 80) }));
-  const body = v.kind === "bar" ? <Bar v={v} /> : v.kind === "quadrant" ? <Quadrant v={v} /> : v.kind === "line" ? <Line v={v} /> : v.kind === "compare" ? <Compare v={v} /> : v.kind === "table" ? <Table v={v} /> : null;
+  const body = v.kind === "bar" ? <Bar v={v} /> : v.kind === "quadrant" ? <Quadrant v={v} /> : v.kind === "line" ? <Line v={v} /> : v.kind === "compare" ? <Compare v={v} /> : v.kind === "table" ? <Table v={v} /> : v.kind === "machine" ? <Machine v={v} /> : v.kind === "arc" ? <Arc v={v} /> : null;
   const headers: Record<string, string> = { "Cache-Control": "public, max-age=300, s-maxage=900, stale-while-revalidate=900" };
   if (q.get("dl")) headers["Content-Disposition"] = `attachment; filename="purpledinos-${v.kind}.png"`;
   return new ImageResponse(

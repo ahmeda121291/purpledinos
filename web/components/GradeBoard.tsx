@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { playerHref } from "@/lib/slug";
 import { track } from "./Analytics";
 import Tip from "./Tip";
+import Jersey from "./Jersey";
 
 const GRADES = ["A+", "A", "B+", "B", "C+", "C", "D", "F"];
 const pm = (v: any) => (Number(v) > 0 ? `+${v}` : `${v}`);
@@ -17,7 +18,7 @@ export function GradeBadge({ g, kind, size = 52 }: { g: string | null; kind: "la
   );
 }
 
-export default function GradeBoard({ gameId, rows: initial, open }: { gameId: string; rows: any[]; open: boolean }) {
+export default function GradeBoard({ gameId, rows: initial, open, jerseys = {} }: { gameId: string; rows: any[]; open: boolean; jerseys?: Record<string, string> }) {
   const [rows, setRows] = useState(initial);
   const [mine, setMine] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -65,7 +66,8 @@ export default function GradeBoard({ gameId, rows: initial, open }: { gameId: st
           return (
             <article key={id} className="glass gcard" style={{ padding: "18px 20px", opacity: inc ? 0.6 : 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                {jerseys[String(id)] ? <Jersey name={r.full_name} number={jerseys[String(id)]} size={52} /> : null}
+                <div style={{ flex: "1 1 200px", minWidth: 0 }}>
                   <Link href={playerHref(r.full_name)} className="ul" style={{ fontSize: 20, fontWeight: 700, color: "var(--ink)" }}>{r.full_name}</Link>
                   <div className="mono muted" style={{ fontSize: 13, marginTop: 4 }}>
                     {Math.round(Number(r.minutes))} MIN · <b className="ink">{r.pts}</b> PTS · {r.reb} REB · {r.ast} AST · {r.fgm}/{r.fga} FG · {pm(r.plus_minus)}

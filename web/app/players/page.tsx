@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Header, Footer } from "@/components/Chrome";
 import PlayerIndex from "@/components/PlayerIndex";
+import Jersey from "@/components/Jersey";
 import { getAllPlayers } from "@/lib/players";
 
 export const revalidate = 3600;
@@ -19,7 +20,7 @@ const years = (p: any) => {
 
 export default async function Players() {
   const all = (await getAllPlayers()).filter((p) => p.gp > 0).map((p) => ({ ...p, years: years(p) }));
-  const roster = all.filter((p) => p.is_active).sort((a, b) => b.ppg - a.ppg);
+  const roster = all.filter((p) => p.is_active && p.jersey).sort((a, b) => b.ppg - a.ppg);
   return (
     <div style={{ overflow: "hidden" }}>
       <Header active="players" />
@@ -30,9 +31,12 @@ export default async function Players() {
           <div className="sechead"><h2 className="h2">The <span className="se" style={{ fontSize: "1.1em" }}>current</span> squad</h2></div>
           <div className="roster">
             {roster.map((p) => (
-              <Link key={p.player_id} href={`/players/${p.slug}`} className="glass lift" style={{ padding: "18px 20px", borderRadius: 20, textDecoration: "none", color: "var(--ink)" }}>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>{p.full_name}</div>
-                <div className="mono muted" style={{ fontSize: 13, marginTop: 4 }}><b className="gold">{p.ppg.toFixed(1)}</b> / {p.rpg.toFixed(1)} / {p.apg.toFixed(1)} · {p.gp} GP</div>
+              <Link key={p.player_id} href={`/players/${p.slug}`} className="glass lift jersey-card" style={{ padding: "16px 18px", borderRadius: 20, textDecoration: "none", color: "var(--ink)" }}>
+                <Jersey name={p.full_name} number={p.jersey} size={58} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>{p.full_name}</div>
+                  <div className="mono muted" style={{ fontSize: 13, marginTop: 4 }}><b className="gold">{p.ppg.toFixed(1)}</b> / {p.rpg.toFixed(1)} / {p.apg.toFixed(1)} · {p.gp} GP{p.pos ? ` · ${p.pos}` : ""}</div>
+                </div>
               </Link>
             ))}
           </div>

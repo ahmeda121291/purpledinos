@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Header, Footer, X_URL } from "@/components/Chrome";
 import { GradeBadge } from "@/components/GradeBoard";
 import Tip from "@/components/Tip";
+import Jersey from "@/components/Jersey";
 import { fmt } from "@/lib/data";
 import { getAllPlayers, getPlayerBySlug, getPlayerProfile } from "@/lib/players";
 import { teamName } from "@/lib/teams";
@@ -58,9 +59,12 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
           <div aria-hidden="true" className="drift" style={{ position: "absolute", right: -120, top: -80, width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle, rgba(107,63,212,.38), transparent 65%)", pointerEvents: "none" }} />
           <nav aria-label="Breadcrumb" className="k muted" style={{ fontSize: 11, marginBottom: 18 }}><Link className="ul" href="/players">Players</Link> <span className="gold">/</span> {p.full_name}</nav>
           <div className="k gold rise" style={{ marginBottom: 12 }}>{p.is_active ? "Current Raptor" : "Raptors alum"} · {years(p)}</div>
-          <h1 className="rise" style={{ margin: 0, fontWeight: 800, fontSize: "clamp(46px,8vw,112px)", lineHeight: 0.9, letterSpacing: "-.05em" }}>
-            {p.full_name.split(" ").slice(0, -1).join(" ")} <span className="se" style={{ fontSize: "1.04em" }}>{p.full_name.split(" ").slice(-1)}</span>
-          </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px 28px", flexWrap: "wrap" }}>
+            {p.is_active && p.jersey ? <div className="rise"><Jersey name={p.full_name} number={p.jersey} size={128} title /></div> : null}
+            <h1 className="rise" style={{ margin: 0, fontWeight: 800, fontSize: "clamp(46px,8vw,112px)", lineHeight: 0.9, letterSpacing: "-.05em" }}>
+              {p.full_name.split(" ").slice(0, -1).join(" ")} <span className="se" style={{ fontSize: "1.04em" }}>{p.full_name.split(" ").slice(-1)}</span>
+            </h1>
+          </div>
           <div className="stat-strip" style={{ marginTop: 36 }}>
             {stats.map(([k, v]) => (
               <div key={k} className="glass lift" style={{ padding: "18px 20px", borderRadius: 20 }}>
@@ -71,7 +75,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
           </div>
           <p className="k muted" style={{ fontSize: 11, marginTop: 12 }}>Regular season, as a Raptor</p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
-            <Link className="btn btn-g" href={compare}>Compare him with the greats</Link>
+            <Link className="btn btn-g" href={`/stats-lab?tab=machine&a=${encodeURIComponent(p.full_name)}&as=${reg[0]?.season_id ?? ""}#explorer`}>Put his best season in the Time Machine</Link>
+            <Link className="btn btn-o" href={`/stats-lab?tab=similar&sp=${encodeURIComponent(p.full_name)}&ss=${reg[0]?.season_id ?? ""}#explorer`}>Who&apos;s he most like?</Link>
+            <Link className="btn btn-o" href={compare}>Compare with the greats</Link>
             <a className="btn btn-o" href={share}>Share on X</a>
           </div>
         </section>

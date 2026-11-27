@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import GradesView from "@/components/GradesView";
 import { getLatestGrades } from "@/lib/cards";
 import { db } from "@/lib/supabase";
+import { getJerseyMap } from "@/lib/players";
 
 export const revalidate = 60;
 export const metadata: Metadata = {
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Grades() {
-  const [g, { data: history }] = await Promise.all([getLatestGrades(), db.rpc("recent_grade_games", { p_limit: 12 })]);
+  const [g, { data: history }, jerseys] = await Promise.all([getLatestGrades(), db.rpc("recent_grade_games", { p_limit: 12 }), getJerseyMap()]);
   if (!g) notFound();
-  return <GradesView g={g} history={(history as never[]) ?? []} latestId={g.game.game_id} />;
+  return <GradesView g={g} history={(history as never[]) ?? []} latestId={g.game.game_id} jerseys={jerseys} />;
 }

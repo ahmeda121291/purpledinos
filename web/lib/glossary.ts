@@ -12,4 +12,8 @@ export const GLOSSARY: Record<string, { name: string; text: string }> = {
   fan: { name: "Fan consensus", text: "Every fan's grade for that player, averaged together on a 4.3 scale (A+ = 4.3, F = 0) and turned back into a letter." },
   tov: { name: "Turnover % (TOV%)", text: "Turnovers per 100 plays. Lower is better." },
   par3: { name: "3PA rate", text: "Share of field goal attempts taken from three." },
+  era: { name: "Era-adjusted", text: "Translates old seasons into today's league. Points are scaled by pace and league scoring (possessions × points per possession), rebounds, assists, steals, blocks and threes by pace, and true shooting by how far above or below that year's league average a player was." },
+  relts: { name: "TS vs league average", text: "How much better (or worse) a player's true shooting was than the league average that season. The fairest way to compare shooting across eras." },
+  similar: { name: "How matches work", text: "Each season becomes an era-adjusted per-36 profile. We measure the distance to every other Raptors season (20+ games, 15+ minutes) and turn it into a match score. 100% would be a carbon copy." },
+  clutch: { name: "Clutch", text: "The NBA's standard definition: last 5 minutes of the 4th quarter or overtime with the score within 5 points either way." },
 };

@@ -11,6 +11,11 @@ export const getAllPlayers = cache(async () => {
   });
 });
 
+export async function getJerseyMap() {
+  const all = await getAllPlayers();
+  return Object.fromEntries(all.filter((p) => p.is_active && p.jersey).map((p) => [String(p.player_id), p.jersey as string]));
+}
+
 export async function getPlayerBySlug(slug: string) {
   return (await getAllPlayers()).find((p) => p.slug === slug) ?? null;
 }

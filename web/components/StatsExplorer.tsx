@@ -8,16 +8,29 @@ import { playerHref } from "@/lib/slug";
 import { track } from "./Analytics";
 import Tip from "./Tip";
 import ChartStudio, { ShareActions, vizQuery } from "./ChartStudio";
+import { TimeMachine, BestSeasons, TeamHistory, SimilarSeasons, CareerArcs, GameLogs, Clutch, machineQs, bestQs, teamsQs, similarQs, arcQs } from "./LabHistory";
 
 type Season = { season_id: string; has_lineups: boolean };
 type Col = { key: string; label: string; fmt?: "1" | "int" | "signed"; title?: string; tip?: string };
 
 const TABS = [
-  { id: "players", label: "Players" },
-  { id: "lineups", label: "Lineups" },
-  { id: "leaders", label: "All-time leaders" },
-  { id: "compare", label: "Compare" },
-  { id: "chart", label: "Chart it ✦" },
+  { id: "players", label: "Players", mode: "now" },
+  { id: "lineups", label: "Lineups", mode: "now" },
+  { id: "gamelog", label: "Game logs", mode: "now" },
+  { id: "clutch", label: "Clutch", mode: "now" },
+  { id: "machine", label: "Time Machine", mode: "then" },
+  { id: "best", label: "Best seasons", mode: "then" },
+  { id: "teams", label: "Team history", mode: "then" },
+  { id: "similar", label: "Similar seasons", mode: "then" },
+  { id: "arcs", label: "Career arcs", mode: "then" },
+  { id: "leaders", label: "All-time leaders", mode: "then" },
+  { id: "compare", label: "First N games", mode: "then" },
+  { id: "chart", label: "Chart Studio", mode: "chart" },
+];
+const MODES = [
+  { id: "now", label: "Now", sub: "This season, live", first: "players" },
+  { id: "then", label: "Then vs Now", sub: "Every Raptors season since 1995", first: "machine" },
+  { id: "chart", label: "Make a chart", sub: "Turn anything into a shareable image", first: "chart" },
 ];
 
 const f1 = (v: any) => (v === null || v === undefined || Number.isNaN(Number(v)) ? "—" : Number(v).toFixed(1));
@@ -291,23 +304,50 @@ export default function StatsExplorer({ seasons }: { seasons: Season[] }) {
   const share = async () => {
     try { await navigator.clipboard.writeText(window.location.href); track("explorer_link_copied", { tab }); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* ignore */ }
   };
+  const mode = TABS.find((t) => t.id === tab)?.mode ?? "now";
+  const current = seasons[0]?.season_id ?? "";
+  const shareQs: Record<string, string> = {
+    machine: machineQs(p, current), best: bestQs(p), teams: teamsQs(p, 0), similar: similarQs(p, current), arcs: arcQs(p),
+  };
+  const tableTabs = ["players", "lineups", "leaders", "compare"];
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
-        <div className="tabs" role="tablist" aria-label="Explorer">
-          {TABS.map((t) => (
-            <button key={t.id} role="tab" type="button" aria-selected={tab === t.id} className={tab === t.id ? "tab on" : "tab"} onClick={() => { p.set({ tab: t.id }); track("explorer_tab", { tab: t.id }); }}>{t.label}</button>
-          ))}
-        </div>
-        <button type="button" className="btn btn-o" style={{ minHeight: 44, padding: "0 18px", fontSize: 14 }} onClick={share}>{copied ? "Link copied" : "Copy link to this view"}</button>
+      <div className="modes" role="tablist" aria-label="Stats Lab mode">
+        {MODES.map((m) => (
+          <button key={m.id} type="button" role="tab" aria-selected={mode === m.id} className={mode === m.id ? "mode on" : "mode"} onClick={() => { p.set({ tab: m.first }); track("lab_mode", { mode: m.id }); }}>
+            <b>{m.label}</b><span>{m.sub}</span>
+          </button>
+        ))}
       </div>
-      {tab !== "chart" ? (
+      {mode !== "chart" ? (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", margin: "18px 0 24px" }}>
+          <div className="tabs" role="tablist" aria-label="Explorer">
+            {TABS.filter((t) => t.mode === mode).map((t) => (
+              <button key={t.id} role="tab" type="button" aria-selected={tab === t.id} className={tab === t.id ? "tab on" : "tab"} onClick={() => { p.set({ tab: t.id }); track("explorer_tab", { tab: t.id }); }}>{t.label}</button>
+            ))}
+          </div>
+          <button type="button" className="btn btn-o" style={{ minHeight: 44, padding: "0 18px", fontSize: 14 }} onClick={share}>{copied ? "Link copied" : "Copy link to this view"}</button>
+        </div>
+      ) : <div style={{ height: 22 }} />}
+      {tableTabs.includes(tab) ? (
         <div className="sharebar">
           <span className="k muted" style={{ fontSize: 11 }}>Make it shareable</span>
           <ShareActions qs={vizQuery(new URLSearchParams(p.sp.toString() + `&tab=${tab}`), "table")} label="table" compact />
           <button type="button" className="btn btn-o sm" onClick={chartThis}>✦ Chart this</button>
         </div>
+      ) : shareQs[tab] ? (
+        <div className="sharebar">
+          <span className="k muted" style={{ fontSize: 11 }}>Make it shareable</span>
+          <ShareActions qs={shareQs[tab]} label="image" compact />
+        </div>
       ) : null}
+      {tab === "machine" ? <TimeMachine p={p} current={current} /> : null}
+      {tab === "best" ? <BestSeasons p={p} current={current} /> : null}
+      {tab === "teams" ? <TeamHistory p={p} current={current} /> : null}
+      {tab === "similar" ? <SimilarSeasons p={p} current={current} /> : null}
+      {tab === "arcs" ? <CareerArcs p={p} /> : null}
+      {tab === "gamelog" ? <GameLogs p={p} /> : null}
+      {tab === "clutch" ? <Clutch p={p} current={current} /> : null}
       {tab === "chart" ? <ChartStudio p={p} sp={new URLSearchParams(p.sp.toString())} seasons={seasons} /> : null}
       {tab === "players" ? <Players seasons={seasons} p={p} /> : null}
       {tab === "lineups" ? <Lineups seasons={seasons} p={p} /> : null}
