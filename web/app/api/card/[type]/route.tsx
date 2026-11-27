@@ -69,7 +69,7 @@ function Frame({ label, children }: { label: string; children: any }) {
       <div style={{ display: "flex", flex: 1, flexDirection: "column", justifyContent: "center", position: "relative" }}>{children}</div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1.5px solid rgba(217,184,120,.35)", paddingTop: 18 }}>
         <K size={18}>purpledinos.ca</K>
-        <K size={18} color={SOFT}>@PurpleDinosTO · Made in the 6ix</K>
+        <div style={{ display: "flex", fontFamily: MONO, fontSize: 18, letterSpacing: 2, color: SOFT }}>@PurpleDinosTO · MADE IN THE 6IX</div>
       </div>
     </div>
   );
@@ -109,13 +109,13 @@ function render(type: CardType, d: any) {
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <K size={20} color={d.wl === "W" ? GOLD : LILAC}>{d.wl === "W" ? "Raptors win" : "Raptors fall"}</K>
               <div style={{ display: "flex", alignItems: "baseline", gap: 26 }}>
-                <span style={{ fontFamily: MONO, fontSize: 150, lineHeight: 1, color: d.wl === "W" ? GOLD : INK }}>{d.team_pts}</span>
+                <span style={{ fontFamily: MONO, fontSize: 128, lineHeight: 1, color: d.wl === "W" ? GOLD : INK }}>{d.team_pts}</span>
                 <Serif size={56} color={MUTED}>{d.is_home ? "vs" : "at"}</Serif>
-                <span style={{ fontFamily: MONO, fontSize: 150, lineHeight: 1, color: d.wl === "W" ? INK : GOLD }}>{d.opp_pts}</span>
+                <span style={{ fontFamily: MONO, fontSize: 128, lineHeight: 1, color: d.wl === "W" ? INK : GOLD }}>{d.opp_pts}</span>
               </div>
               <div style={{ display: "flex", fontSize: 30, color: SOFT }}>Toronto vs the {d.opponent}</div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "26px 30px", borderRadius: 28, border: "1.5px solid rgba(243,238,230,.16)", background: "rgba(30,26,40,.7)", width: 450 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "26px 30px", borderRadius: 28, border: "1.5px solid rgba(243,238,230,.16)", background: "rgba(30,26,40,.7)", width: 420 }}>
               <K size={16} color={MUTED}>Top 3 · Game Score</K>
               {d.top.map((p: any, i: number) => (
                 <div key={p.full_name} style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 0", borderTop: i ? "1px solid rgba(243,238,230,.1)" : "none" }}>
@@ -171,7 +171,7 @@ function render(type: CardType, d: any) {
     case "report": {
       const Row = ({ r, up }: any) => (
         <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 0" }}>
-          <div style={{ display: "flex", flexDirection: "column", width: 270 }}>
+          <div style={{ display: "flex", flexDirection: "column", width: 300 }}>
             <span style={{ fontSize: 27, fontWeight: 600 }}>{r.full_name}</span>
             <span style={{ fontFamily: MONO, fontSize: 17, color: MUTED }}>{fmt.n1(r.ts_last5)}% TS last 5</span>
           </div>
