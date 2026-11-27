@@ -75,7 +75,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
           </div>
           <p className="k muted" style={{ fontSize: 11, marginTop: 12 }}>Regular season, as a Raptor</p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
-            <Link className="btn btn-g" href={`/stats-lab?tab=machine&a=${encodeURIComponent(p.full_name)}&as=${reg[0]?.season_id ?? ""}#explorer`}>Put his best season in the Time Machine</Link>
+            <Link className="btn btn-g" href={`/stats-lab?tab=machine&a=${encodeURIComponent(p.full_name)}&as=${reg[0]?.season_id ?? ""}#explorer`}>Put this season in the Time Machine</Link>
             <Link className="btn btn-o" href={`/stats-lab?tab=similar&sp=${encodeURIComponent(p.full_name)}&ss=${reg[0]?.season_id ?? ""}#explorer`}>Who&apos;s he most like?</Link>
             <Link className="btn btn-o" href={compare}>Compare with the greats</Link>
             <a className="btn btn-o" href={share}>Share on X</a>
