@@ -4,15 +4,10 @@ import { db } from "./supabase";
 import { slugify } from "./slug";
 
 export const getAllPlayers = cache(async () => {
-  const [{ data: players }, { data: totals }] = await Promise.all([
-    db.from("players").select("player_id, full_name, first_season, last_season, is_active"),
-    db.from("v_career_totals").select("player_id, gp, pts, reb, ast, last_game"),
-  ]);
-  const t = new Map(((totals as any[]) ?? []).map((r) => [Number(r.player_id), r]));
-  return ((players as any[]) ?? []).map((p) => {
-    const c: any = t.get(Number(p.player_id)) ?? {};
-    const gp = Number(c.gp ?? 0);
-    return { ...p, slug: slugify(p.full_name), gp, ppg: gp ? Number(c.pts) / gp : 0, rpg: gp ? Number(c.reb) / gp : 0, apg: gp ? Number(c.ast) / gp : 0, last_game: c.last_game as string | null };
+  const { data } = await db.rpc("player_index");
+  return ((data as any[]) ?? []).map((p) => {
+    const gp = Number(p.gp ?? 0);
+    return { ...p, slug: slugify(p.full_name), gp, ppg: gp ? Number(p.pts) / gp : 0, rpg: gp ? Number(p.reb) / gp : 0, apg: gp ? Number(p.ast) / gp : 0 };
   });
 });
 
