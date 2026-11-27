@@ -183,12 +183,12 @@ function Arc({ v }: { v: any }) {
   const pts = (vals: number[]) => { const step = Math.max(1, Math.ceil(vals.length / 220)); return vals.filter((_, i) => i % step === 0 || i === vals.length - 1).map((y, j, arr) => `${X(j === arr.length - 1 ? vals.length - 1 : j * step).toFixed(1)},${Y(y).toFixed(1)}`).join(" "); };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", gap: 24 }}>
+      <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
         {v.series.map((s: any, i: number) => (
-          <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "flex", width: 14, height: 14, borderRadius: 7, background: COLORS[i] }} />
-            <span style={{ fontSize: 19, fontWeight: 700 }}>{s.name}</span>
-            <span style={{ fontFamily: MONO, fontSize: 16, color: MUTED }}>{f(s.vals[s.vals.length - 1], v.title.startsWith("Game") ? "1" : "int")} · {s.vals.length} GP</span>
+          <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{ display: "flex", width: 12, height: 12, borderRadius: 6, background: COLORS[i] }} />
+            <span style={{ fontSize: 17, fontWeight: 700 }}>{s.name.split(" ").slice(-1)[0]}</span>
+            <span style={{ fontFamily: MONO, fontSize: 15, color: MUTED }}>{f(s.vals[s.vals.length - 1], v.title.startsWith("Game") ? "1" : "int")} · {s.vals.length} GP</span>
           </div>
         ))}
       </div>
