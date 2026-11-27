@@ -21,13 +21,14 @@ export async function getPlayerBySlug(slug: string) {
 }
 
 export async function getPlayerProfile(id: number) {
-  const [career, seasons, ranks, best, recent, grades] = await Promise.all([
+  const [career, seasons, ranks, best, recent, grades, prog] = await Promise.all([
     db.rpc("player_career", { p_id: id }),
     db.rpc("player_seasons", { p_id: id }),
     db.rpc("player_ranks", { p_id: id }),
     db.from("v_player_games").select("game_id, game_date, opponent_abbr, is_home, wl, team_pts, opp_pts, minutes, pts, reb, ast, stl, blk, fgm, fga, fg3m, game_score, season_type").eq("player_id", id).order("game_score", { ascending: false }).limit(5),
     db.from("v_player_games").select("game_id, game_date, opponent_abbr, is_home, wl, minutes, pts, reb, ast, stl, blk, fgm, fga, plus_minus, game_score, ts_pct").eq("player_id", id).gt("minutes", 0).order("game_date", { ascending: false }).limit(10),
     db.rpc("player_fan_grades", { p_id: id, p_limit: 10 }),
+    db.from("v_player_seasons").select("season_id, gp, ppg, per, ts_pct, usg_pct, ast_pct, trb_pct, par3_pct, stocks36, gmsc36, tov_pct").eq("player_id", id).order("season_id"),
   ]);
   const gmap = new Map(((grades.data as any[]) ?? []).map((g) => [g.game_id, g]));
   return {
@@ -35,6 +36,7 @@ export async function getPlayerProfile(id: number) {
     seasons: (seasons.data as any[]) ?? [],
     ranks: (ranks.data as any[]) ?? [],
     best: (best.data as any[]) ?? [],
+    progression: (prog.data as any[]) ?? [],
     recent: ((recent.data as any[]) ?? []).map((r) => ({ ...r, lab: gmap.get(r.game_id)?.lab, fan: gmap.get(r.game_id)?.fan })),
   };
 }

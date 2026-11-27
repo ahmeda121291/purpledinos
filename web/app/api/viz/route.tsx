@@ -211,6 +211,53 @@ function Arc({ v }: { v: any }) {
   );
 }
 
+function Progress({ v }: { v: any }) {
+  const PW = 1000, PH = 300;
+  const all = v.series.flatMap((s: any) => s.pts) as any[];
+  if (!all.length) return <div style={{ display: "flex", fontSize: 28 }}>No seasons found.</div>;
+  const xs = [...new Set(all.map((p) => p.x))].sort((a, b) => a - b);
+  const ys = all.map((p) => p.y), lo = Math.min(...ys), hi = Math.max(...ys), pad = (hi - lo) * 0.15 || 1;
+  const y0 = lo - pad, y1 = hi + pad;
+  const X = (x: number) => (xs.length === 1 ? PW / 2 : ((x - xs[0]) / (xs[xs.length - 1] - xs[0])) * (PW - 40) + 20);
+  const Y = (y: number) => (1 - (y - y0) / (y1 - y0)) * PH;
+  const labelOf = (x: number) => all.find((p) => p.x === x)?.label ?? String(x);
+  const single = v.series.length === 1;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {!single ? (
+        <div style={{ display: "flex", gap: 22 }}>
+          {v.series.map((s: any, i: number) => (
+            <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", width: 12, height: 12, borderRadius: 6, background: COLORS[i] }} />
+              <span style={{ fontSize: 18, fontWeight: 700 }}>{s.name}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: PH, width: 60, alignItems: "flex-end" }}>
+          {[y1, (y0 + y1) / 2, y0].map((t, i) => <span key={i} style={{ fontFamily: MONO, fontSize: 14, color: MUTED }}>{f(t, v.fmt)}</span>)}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", position: "relative", width: PW, height: PH }}>
+            <svg width={PW} height={PH} viewBox={`0 0 ${PW} ${PH}`}>
+              <line x1="0" y1={PH / 2} x2={PW} y2={PH / 2} stroke="rgba(243,238,230,.08)" strokeWidth="1" />
+              {v.series.map((s: any, i: number) => <polyline key={s.name} points={s.pts.map((p: any) => `${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join(" ")} fill="none" stroke={COLORS[i]} strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />)}
+              {v.series.map((s: any, i: number) => s.pts.map((p: any, j: number) => <circle key={s.name + j} cx={X(p.x)} cy={Y(p.y)} r="7" fill={COLORS[i]} stroke="#0A090C" strokeWidth="2" />))}
+            </svg>
+            {v.series.length <= 2 && xs.length <= 14 ? v.series.map((s: any, i: number) => s.pts.map((p: any, j: number) => (
+              <span key={s.name + j} style={{ position: "absolute", left: X(p.x) - 30, top: Y(p.y) + (i ? 12 : -32), width: 60, textAlign: "center", display: "flex", justifyContent: "center", fontFamily: MONO, fontSize: 15, color: COLORS[i] }}>{f(p.y, v.fmt)}</span>
+            ))) : null}
+          </div>
+          <div style={{ display: "flex", position: "relative", width: PW, height: 22, marginTop: 6 }}>
+            {(xs.length <= 16 ? xs : xs.filter((_, i) => i % Math.ceil(xs.length / 12) === 0)).map((x) => <span key={x} style={{ position: "absolute", left: X(x) - 25, width: 50, display: "flex", justifyContent: "center", fontFamily: MONO, fontSize: 14, color: MUTED }}>{labelOf(x)}</span>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Table({ v }: { v: any }) {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
@@ -235,7 +282,7 @@ function Table({ v }: { v: any }) {
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams;
   const v = await getViz(q).catch((e) => ({ kind: "error", title: "Couldn't build that chart", ctx: String(e?.message ?? e).slice(0, 80) }));
-  const body = v.kind === "bar" ? <Bar v={v} /> : v.kind === "quadrant" ? <Quadrant v={v} /> : v.kind === "line" ? <Line v={v} /> : v.kind === "compare" ? <Compare v={v} /> : v.kind === "table" ? <Table v={v} /> : v.kind === "machine" ? <Machine v={v} /> : v.kind === "arc" ? <Arc v={v} /> : null;
+  const body = v.kind === "bar" ? <Bar v={v} /> : v.kind === "quadrant" ? <Quadrant v={v} /> : v.kind === "line" ? <Line v={v} /> : v.kind === "compare" ? <Compare v={v} /> : v.kind === "table" ? <Table v={v} /> : v.kind === "machine" ? <Machine v={v} /> : v.kind === "arc" ? <Arc v={v} /> : v.kind === "progress" ? <Progress v={v} /> : null;
   const headers: Record<string, string> = { "Cache-Control": "public, max-age=300, s-maxage=900, stale-while-revalidate=900" };
   if (q.get("dl")) headers["Content-Disposition"] = `attachment; filename="purpledinos-${v.kind}.png"`;
   return new ImageResponse(

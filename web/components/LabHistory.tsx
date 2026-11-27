@@ -256,16 +256,17 @@ export function TeamHistory({ p, current }: { p: P; current: string }) {
     return () => { off = true; };
   }, [n]);
   const now = rows.find((r) => r.season_id === current), then = rows.find((r) => r.season_id === comp);
-  const sorted = [...rows].sort((a, b) => (sort === "drtg" || sort === "tov_pct" ? Number(a[sort]) - Number(b[sort]) : Number(b[sort]) - Number(a[sort])));
+  const sorted = [...rows].sort((a, b) => (["drtg", "tov_pct", "opp_efg", "opp_ftr"].includes(sort) ? Number(a[sort]) - Number(b[sort]) : Number(b[sort]) - Number(a[sort])));
   const rank = sorted.findIndex((r) => r.season_id === current) + 1;
-  const CMP: [string, string, string?, boolean?][] = [["w", "Wins"], ["on_pace", "On pace for (wins)"], ["ortg", "Offence", "ortg"], ["drtg", "Defence", "drtg", true], ["net", "Net rating", "net"], ["pace", "Pace"], ["ts_pct", "True shooting %", "ts"], ["par3", "3PA rate", "par3"], ["tov_pct", "Turnover %", "tov", true]];
+  const CMP: [string, string, string?, boolean?][] = [["w", "Wins"], ["on_pace", "On pace for (wins)"], ["ortg", "Offence", "ortg"], ["drtg", "Defence", "drtg", true], ["net", "Net rating", "net"], ["pace", "Pace"], ["ts_pct", "True shooting %", "ts"], ["par3", "3PA rate", "par3"], ["tov_pct", "Turnover %", "tov", true],
+    ["opp_efg", "Opponent eFG%", "oppefg", true], ["opp_tov_pct", "Forced turnover %", "opptov"], ["drb_pct", "Defensive rebound %", "teamdrb"], ["opp_ftr", "Opponent FT rate", "oppftr", true]];
   const nOpts: [string, string][] = [...new Set([curGames, 10, 20, 30, 41, 60, 82].filter(Boolean))].sort((x, y) => x - y).map((v) => [String(v), v === curGames ? `${v} (where we are now)` : String(v)]);
   return (
     <div>
       <div className="controls">
         <Sel label="Through first N games" value={String(n)} onChange={(v) => p.set({ tn: v })} options={nOpts} />
         <Sel label="Compare with" value={comp} onChange={(v) => p.set({ tc: v })} options={rows.filter((r) => r.season_id !== current).map((r) => [r.season_id, `${r.season_id}${r.playoff_result ? ` · ${r.playoff_result}` : ""}`])} />
-        <Sel label="Rank by" value={sort} onChange={(v) => p.set({ tsort: v })} options={[["net", "Net rating"], ["w", "Wins"], ["ortg", "Offence"], ["drtg", "Defence"], ["pace", "Pace"], ["par3", "3PA rate"]]} />
+        <Sel label="Rank by" value={sort} onChange={(v) => p.set({ tsort: v })} options={[["net", "Net rating"], ["w", "Wins"], ["ortg", "Offence"], ["drtg", "Defence"], ["pace", "Pace"], ["par3", "3PA rate"], ["opp_efg", "Opponent eFG% (lowest)"], ["opp_tov_pct", "Forced turnovers"], ["drb_pct", "Defensive rebounding"]]} />
       </div>
       {now && then ? (
         <div className="glass" style={{ padding: "8px 20px", marginBottom: 18 }}>
@@ -291,11 +292,11 @@ export function TeamHistory({ p, current }: { p: P; current: string }) {
       {rank ? <p style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px" }}>This start ranks <span className="gold">#{rank} of {rows.length}</span> Raptors seasons by {sort === "w" ? "wins" : sort === "net" ? "net rating" : sort}.</p> : null}
       <div className="glass scroll" style={{ padding: "8px 22px" }}>
         <table className="t">
-          <thead><tr><th>Season</th><th>Record</th><th>Off<Tip term="ortg" /></th><th>Def<Tip term="drtg" /></th><th>Net<Tip term="net" /></th><th>Pace</th><th>TS%</th><th>3PA rate</th><th>Final</th><th>Playoffs</th></tr></thead>
+          <thead><tr><th>Season</th><th>Record</th><th>Off<Tip term="ortg" /></th><th>Def<Tip term="drtg" /></th><th>Net<Tip term="net" /></th><th>Pace</th><th>TS%</th><th>3PA rate</th><th>Opp eFG%<Tip term="oppefg" /></th><th>Forced TOV%<Tip term="opptov" /></th><th>DRB%<Tip term="teamdrb" /></th><th>Final</th><th>Playoffs</th></tr></thead>
           <tbody>
             {sorted.map((r) => (
               <tr key={r.season_id} className={r.season_id === current ? "live-row" : r.season_id === comp ? "cmp-row" : undefined}>
-                <td>{r.season_id}</td><td>{r.w}–{r.l}</td><td>{n1(r.ortg)}</td><td>{n1(r.drtg)}</td><td className={sort === "net" ? "sorted" : undefined}>{sg(r.net)}</td><td>{n1(r.pace)}</td><td>{n1(r.ts_pct)}</td><td>{n1(r.par3)}</td>
+                <td>{r.season_id}</td><td>{r.w}–{r.l}</td><td>{n1(r.ortg)}</td><td>{n1(r.drtg)}</td><td className={sort === "net" ? "sorted" : undefined}>{sg(r.net)}</td><td>{n1(r.pace)}</td><td>{n1(r.ts_pct)}</td><td>{n1(r.par3)}</td><td>{n1(r.opp_efg)}</td><td>{n1(r.opp_tov_pct)}</td><td>{n1(r.drb_pct)}</td>
                 <td>{r.final_w != null ? `${r.final_w}–${r.final_l}` : "—"}</td><td style={{ fontFamily: "inherit", fontSize: 13 }}>{r.playoff_result ?? "—"}</td>
               </tr>
             ))}
@@ -472,6 +473,123 @@ export function Clutch({ p, current }: { p: P; current: string }) {
               </tr>
             ))}
             {!rows.length ? <tr><td colSpan={8} className="muted" style={{ padding: 24 }}>No clutch minutes logged yet.</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Career progress ---------------- */
+export function progressQs(p: P) {
+  return new URLSearchParams({ kind: "progress", players: p.get("pp", "Scottie Barnes"), pm: p.get("pm", "usg_pct"), px: p.get("px", "season") }).toString();
+}
+export function CareerProgress({ p }: { p: P }) {
+  const ps = usePlayerSeasons();
+  const { names } = usePlayerOpts(ps);
+  const picked = p.get("pp", "Scottie Barnes").split(",").filter(Boolean).slice(0, 3);
+  const metric = p.get("pm", "usg_pct"), x = p.get("px", "season");
+  const [rows, setRows] = useState<any[]>([]);
+  const key = picked.join(",");
+  useEffect(() => {
+    let off = false;
+    db.from("v_player_seasons").select(`full_name, season_id, age, gp, ${metric}`).in("full_name", key.split(",")).order("season_id")
+      .then(({ data }) => { if (!off) setRows((data as any[]) ?? []); });
+    return () => { off = true; };
+  }, [key, metric]);
+  const qs = progressQs(p);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => setLoading(true), [qs]);
+  const m = METRIC[metric];
+  const byPlayer = picked.map((n) => ({ name: n, seasons: rows.filter((r) => r.full_name === n) }));
+  const peak = (list: any[]) => list.reduce((best, r) => (best == null || (m?.lower ? Number(r[metric]) < Number(best[metric]) : Number(r[metric]) > Number(best[metric])) ? r : best), null as any);
+  return (
+    <div>
+      <div className="controls">
+        {[0, 1, 2].map((i) => (
+          <Sel key={i} label={i ? `Compare with` : "Player"} value={picked[i] ?? ""} onChange={(v) => { const n = [...picked]; if (v) n[i] = v; else n.splice(i, 1); p.set({ pp: [...new Set(n)].filter(Boolean).join(",") }); }}
+            options={[["", i < picked.length ? "— remove —" : "— add —"], ...names]} />
+        ))}
+        <MetricSelect label="Stat" value={metric} onChange={(v) => p.set({ pm: v })} />
+        <Sel label="Line up by" value={x} onChange={(v) => p.set({ px: v })} options={[["season", "Season"], ["year", "Year as a Raptor"], ["age", "Age"]]} />
+      </div>
+      <div className="glass viz-frame" style={{ padding: 10, position: "relative" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img key={qs} src={`/api/viz?${qs}`} alt="Career progress chart" width={1200} height={675} onLoad={() => setLoading(false)} style={{ width: "100%", height: "auto", display: "block", borderRadius: 20, opacity: loading ? 0.35 : 1, transition: "opacity .3s" }} />
+        {loading ? <div className="k gold" style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>Drawing…</div> : null}
+      </div>
+      <div className="grid-auto" style={{ marginTop: 18 }}>
+        {byPlayer.map(({ name, seasons }) => {
+          const pk = peak(seasons);
+          const first = seasons[0], last = seasons[seasons.length - 1];
+          const change = first && last && seasons.length > 1 ? Number(last[metric]) - Number(first[metric]) : null;
+          return (
+            <div key={name} className="glass" style={{ padding: 20 }}>
+              <Link className="ul" href={playerHref(name)} style={{ color: "var(--ink)", fontWeight: 800, fontSize: 18 }}>{name}</Link>
+              <div className="mono muted" style={{ fontSize: 13, margin: "6px 0 12px" }}>
+                {pk ? <>Peak: <b className="gold">{fmtMetric(metric, pk[metric])}</b> in {pk.season_id}</> : "—"}
+                {change !== null ? <> · {first.season_id.slice(2)} → {last.season_id.slice(2)}: <b style={{ color: (change > 0) !== Boolean(m?.lower) ? "var(--gold)" : "#B9A4F0" }}>{change > 0 ? "+" : ""}{fmtMetric(metric, change).replace("+", "")}</b></> : null}
+              </div>
+              <table className="t"><tbody>
+                {seasons.map((r) => (
+                  <tr key={r.season_id} className={pk && r.season_id === pk.season_id ? "live-row" : undefined}>
+                    <td>{r.season_id}</td><td className="muted">{r.age ? `age ${Math.round(Number(r.age))}` : ""}</td><td className="muted">{r.gp} GP</td><td className="sorted">{fmtMetric(metric, r[metric])}</td>
+                  </tr>
+                ))}
+              </tbody></table>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Biggest jumps ---------------- */
+export function jumpsQs(p: P) {
+  return new URLSearchParams({ kind: "jumps", jm: p.get("jm", "ppg"), jd: p.get("jd", "up"), jmin: p.get("jmin", "41") }).toString();
+}
+export function BiggestJumps({ p, current }: { p: P; current: string }) {
+  const metric = p.get("jm", "ppg"), dir = p.get("jd", "up"), min = p.get("jmin", "41");
+  const [rows, setRows] = useState<any[]>([]);
+  useEffect(() => {
+    let off = false;
+    db.rpc("season_changes", { p_metric: metric, p_min_gp: Number(min), p_drops: dir === "down", p_limit: 25 }).then(({ data }) => { if (!off) setRows((data as any[]) ?? []); });
+    return () => { off = true; };
+  }, [metric, dir, min]);
+  const m = METRIC[metric];
+  const live = rows.filter((r) => r.season_id === current);
+  return (
+    <div>
+      <div className="controls">
+        <MetricSelect label="Stat" value={metric} onChange={(v) => p.set({ jm: v })} />
+        <div className="ctl">
+          <span className="k muted">Show<Tip term="jumps" /></span>
+          <div className="pills">
+            <button type="button" className={dir === "up" ? "pill on" : "pill"} aria-pressed={dir === "up"} onClick={() => p.set({ jd: null })}>Biggest jumps</button>
+            <button type="button" className={dir === "down" ? "pill on" : "pill"} aria-pressed={dir === "down"} onClick={() => p.set({ jd: "down" })}>Biggest drops</button>
+          </div>
+        </div>
+        <Sel label="Min games (both seasons)" value={min} onChange={(v) => p.set({ jmin: v })} options={[["20", "20+"], ["41", "41+"], ["58", "58+"]]} />
+      </div>
+      {live.length ? (
+        <p style={{ fontSize: 17, margin: "0 0 14px" }}><span className="dot live" style={{ background: "#E5484D", marginRight: 8 }} />
+          This season: <b>{live.map((r) => `${r.full_name} (${Number(r.delta) > 0 ? "+" : ""}${fmtMetric(metric, r.delta).replace("+", "")})`).join(", ")}</b> made the list.</p>
+      ) : null}
+      <p className="k muted" style={{ fontSize: 11, margin: "0 0 12px" }}>Change from a player&apos;s previous Raptors season{m?.lower ? " · for this stat, lower is better" : ""}</p>
+      <div className="glass scroll" style={{ padding: "8px 22px" }}>
+        <table className="t">
+          <thead><tr><th>#</th><th style={{ textAlign: "left" }}>Player</th><th>From</th><th>To</th><th>Age</th><th>Before</th><th>After</th><th>Change</th></tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.player_id + r.season_id} className={r.season_id === current ? "live-row" : undefined}>
+                <td>{i + 1}</td>
+                <td style={{ textAlign: "left" }}><Link className="ul" href={playerHref(r.full_name)} style={{ color: "var(--ink)", fontWeight: 600 }}>{r.full_name}</Link></td>
+                <td>{r.prev_season}</td><td>{r.season_id}</td><td>{r.age ? Math.round(Number(r.age)) : "—"}</td>
+                <td>{fmtMetric(metric, r.prev_val)}</td><td>{fmtMetric(metric, r.val)}</td>
+                <td className="sorted">{Number(r.delta) > 0 ? "+" : "−"}{fmtMetric(metric, Math.abs(Number(r.delta))).replace(/^[+−]/, "")}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

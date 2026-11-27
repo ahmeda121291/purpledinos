@@ -34,4 +34,8 @@ export const GLOSSARY: Record<string, { name: string; text: string }> = {
   labgpa: { name: "Lab grade average", text: "His average Lab grade per game on a 4.3 scale (A+ = 4.3, B = 3.0, C = 2.0). Games under 8 minutes don't count." },
   dd: { name: "Double-doubles", text: "Games with 10+ in at least two of points, rebounds, assists, steals and blocks." },
   jumps: { name: "Year-over-year change", text: "The difference between a player's season and his previous season as a Raptor. Both seasons need enough games to count." },
+  oppefg: { name: "Opponent eFG%", text: "How well opponents shot against Toronto, with threes worth 1.5x. Lower is better defence." },
+  opptov: { name: "Forced turnover %", text: "Opponent turnovers per 100 of their possessions." },
+  teamdrb: { name: "Defensive rebound %", text: "Share of opponents' misses Toronto rebounded. Ending possessions is half of defence." },
+  oppftr: { name: "Opponent FT rate", text: "Opponent free throw attempts per field goal attempt. Lower means fewer cheap points given up." },
 };

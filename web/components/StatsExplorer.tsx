@@ -8,7 +8,7 @@ import { playerHref } from "@/lib/slug";
 import { track } from "./Analytics";
 import Tip from "./Tip";
 import ChartStudio, { ShareActions, vizQuery } from "./ChartStudio";
-import { TimeMachine, BestSeasons, TeamHistory, SimilarSeasons, CareerArcs, GameLogs, Clutch, machineQs, bestQs, teamsQs, similarQs, arcQs } from "./LabHistory";
+import { TimeMachine, BestSeasons, TeamHistory, SimilarSeasons, CareerArcs, GameLogs, Clutch, CareerProgress, BiggestJumps, machineQs, bestQs, teamsQs, similarQs, arcQs, progressQs, jumpsQs } from "./LabHistory";
 
 type Season = { season_id: string; has_lineups: boolean };
 type Col = { key: string; label: string; fmt?: "1" | "int" | "signed"; title?: string; tip?: string };
@@ -19,7 +19,9 @@ const TABS = [
   { id: "gamelog", label: "Game logs", mode: "now" },
   { id: "clutch", label: "Clutch", mode: "now" },
   { id: "machine", label: "Time Machine", mode: "then" },
+  { id: "progress", label: "Career progress", mode: "then" },
   { id: "best", label: "Best seasons", mode: "then" },
+  { id: "jumps", label: "Biggest jumps", mode: "then" },
   { id: "teams", label: "Team history", mode: "then" },
   { id: "similar", label: "Similar seasons", mode: "then" },
   { id: "arcs", label: "Career arcs", mode: "then" },
@@ -151,10 +153,12 @@ function Players({ seasons, p }: { seasons: Season[]; p: ReturnType<typeof usePa
   const n = mode === "tot" ? "int" : "1";
   const advCols: Col[] = [
     { key: "full_name", label: "Player" }, { key: "gp", label: "GP", fmt: "int" }, { key: "mpg", label: "MPG", fmt: "1" },
+    { key: "per", label: "PER", fmt: "1", tip: "per" },
     { key: "ts_pct", label: "TS%", fmt: "1", tip: "ts" }, { key: "efg_pct", label: "eFG%", fmt: "1", tip: "efg" }, { key: "par3_pct", label: "3PAr", fmt: "1", tip: "par3" },
     { key: "ftr", label: "FTr", fmt: "1", tip: "ftr" }, { key: "usg_pct", label: "USG%", fmt: "1", tip: "usg" }, { key: "ast_pct", label: "AST%", fmt: "1", tip: "astpct" },
-    { key: "tov_pct", label: "TOV%", fmt: "1", tip: "tovpct" }, { key: "ast_to", label: "AST/TO", fmt: "1", tip: "astto" }, { key: "oreb_pct", label: "OREB%", fmt: "1", tip: "orebpct" },
-    { key: "reb_share", label: "REB sh.", fmt: "1", tip: "rebshare" }, { key: "pts100", label: "PTS/100", fmt: "1", tip: "per100" }, { key: "stocks36", label: "Stk/36", fmt: "1", tip: "stocks" },
+    { key: "tov_pct", label: "TOV%", fmt: "1", tip: "tovpct" }, { key: "ast_to", label: "AST/TO", fmt: "1", tip: "astto" }, { key: "trb_pct", label: "TRB%", fmt: "1", tip: "trbpct" },
+    { key: "oreb_pct", label: "ORB%", fmt: "1", tip: "orebpct" }, { key: "drb_pct", label: "DRB%", fmt: "1", tip: "drbpct" },
+    { key: "stl_pct", label: "STL%", fmt: "1", tip: "stlpct" }, { key: "blk_pct", label: "BLK%", fmt: "1", tip: "blkpct" }, { key: "pts100", label: "PTS/100", fmt: "1", tip: "per100" }, { key: "stocks36", label: "Stk/36", fmt: "1", tip: "stocks" },
     { key: "gmsc36", label: "GmSc/36", fmt: "1", tip: "gmsc" }, { key: "lab_gpa", label: "Lab GPA", fmt: "1", tip: "labgpa" },
   ];
   const cols: Col[] = mode === "adv" ? advCols : [
@@ -315,7 +319,7 @@ export default function StatsExplorer({ seasons }: { seasons: Season[] }) {
   const mode = TABS.find((t) => t.id === tab)?.mode ?? "now";
   const current = seasons[0]?.season_id ?? "";
   const shareQs: Record<string, string> = {
-    machine: machineQs(p, current), best: bestQs(p), teams: teamsQs(p, 0), similar: similarQs(p, current), arcs: arcQs(p),
+    machine: machineQs(p, current), best: bestQs(p), progress: progressQs(p), jumps: jumpsQs(p), teams: teamsQs(p, 0), similar: similarQs(p, current), arcs: arcQs(p),
   };
   const tableTabs = ["players", "lineups", "leaders", "compare"];
   return (
@@ -351,6 +355,8 @@ export default function StatsExplorer({ seasons }: { seasons: Season[] }) {
       ) : null}
       {tab === "machine" ? <TimeMachine p={p} current={current} /> : null}
       {tab === "best" ? <BestSeasons p={p} current={current} /> : null}
+      {tab === "progress" ? <CareerProgress p={p} /> : null}
+      {tab === "jumps" ? <BiggestJumps p={p} current={current} /> : null}
       {tab === "teams" ? <TeamHistory p={p} current={current} /> : null}
       {tab === "similar" ? <SimilarSeasons p={p} current={current} /> : null}
       {tab === "arcs" ? <CareerArcs p={p} /> : null}

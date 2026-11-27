@@ -161,6 +161,29 @@ export async function getViz(q: URLSearchParams): Promise<any> {
     return { kind, title: LBL[am] ?? LBL.pts, ctx: "Regular season, by game number", series };
   }
 
+  if (kind === "progress") {
+    const names = (q.get("players") || "Scottie Barnes").split(",").filter(Boolean).slice(0, 3);
+    const metric = METRIC[q.get("pm") || ""] ? q.get("pm")! : "usg_pct";
+    const x = q.get("px") || "season";
+    const { data } = await db.from("v_player_seasons").select(`full_name, season_id, age, ${metric}`).in("full_name", names).order("season_id");
+    const rows = (data as any[]) ?? [];
+    const series = names.map((n) => {
+      const list = rows.filter((r) => r.full_name === n && r[metric] != null);
+      return { name: n, pts: list.map((r, i) => ({ x: x === "age" ? Number(r.age ?? 0) : x === "year" ? i + 1 : Number(r.season_id.slice(0, 4)), label: x === "age" ? String(Math.round(Number(r.age ?? 0))) : x === "year" ? `Y${i + 1}` : `'${r.season_id.slice(2, 4)}`, y: Number(r[metric]) })) };
+    }).filter((s) => s.pts.length);
+    return { kind, title: `${names.length === 1 ? names[0] + ": " : ""}${METRIC[metric].label}`, ctx: `Season by season, regular season · by ${x === "age" ? "age" : x === "year" ? "year as a Raptor" : "season"}`, series, fmt: fmtOf(metric) };
+  }
+
+  if (kind === "jumps") {
+    const metric = METRIC[q.get("jm") || ""] ? q.get("jm")! : "ppg";
+    const down = q.get("jd") === "down";
+    const { data } = await db.rpc("season_changes", { p_metric: metric, p_min_gp: Number(q.get("jmin") || 41), p_drops: down, p_limit: 10 });
+    const f = fmtOf(metric);
+    const rows = ((data as any[]) ?? []).map((r) => ({ ...r, name: r.full_name, span: `${r.prev_season.slice(2)} → ${r.season_id.slice(2)}`, d: Number(r.delta) }));
+    return { kind: "table", title: `Biggest ${down ? "drops" : "jumps"} in Raptors history: ${METRIC[metric].short}`, ctx: "Change from the previous Raptors season · regular season", sort: "d",
+      cols: [["name", "Player", "text"], ["span", "Seasons", "raw"], ["prev_val", "Before", f], ["val", "After", f], ["d", "Change", f === "int" ? "int" : "signed"]], rows };
+  }
+
   // table: mirrors the explorer's URL params
   const tab = q.get("tab") || "players";
   if (tab === "lineups") {
@@ -195,7 +218,7 @@ export async function getViz(q: URLSearchParams): Promise<any> {
   const extra: Record<string, any> = { spg: ["spg", "STL", n], bpg: ["bpg", "BLK", n], fg_pct: ["fg_pct", "FG%", "1"], fg3_pct: ["fg3_pct", "3P%", "1"] };
   if (extra[sort]) cols.splice(6, 0, extra[sort]);
   if (mode === "adv") {
-    const adv: any[] = [["name", "Player", "text"], ["gp", "GP", "int"], ["ts_pct", "TS%", "1"], ["efg_pct", "eFG%", "1"], ["usg_pct", "USG%", "1"], ["ast_pct", "AST%", "1"], ["tov_pct", "TOV%", "1"], ["oreb_pct", "OREB%", "1"], ["pts100", "PTS/100", "1"], ["gmsc36", "GmSc/36", "1"]];
+    const adv: any[] = [["name", "Player", "text"], ["gp", "GP", "int"], ["per", "PER", "1"], ["ts_pct", "TS%", "1"], ["usg_pct", "USG%", "1"], ["ast_pct", "AST%", "1"], ["tov_pct", "TOV%", "1"], ["trb_pct", "TRB%", "1"], ["stl_pct", "STL%", "1"], ["blk_pct", "BLK%", "1"]];
     if (METRIC[sort] && !adv.some((c) => c[0] === sort)) adv.splice(2, 0, [sort, METRIC[sort].short, fmtOf(sort)]);
     return { kind: "table", title: "Raptors advanced stats", ctx, sort, cols: adv.slice(0, 11), rows: rows.slice(0, 10).map((r: any) => ({ ...r, name: r.full_name })) };
   }

@@ -6,6 +6,7 @@ import { Header, Footer, X_URL } from "@/components/Chrome";
 import { GradeBadge } from "@/components/GradeBoard";
 import Tip from "@/components/Tip";
 import Jersey from "@/components/Jersey";
+import Progression from "@/components/Progression";
 import { fmt } from "@/lib/data";
 import { getAllPlayers, getPlayerBySlug, getPlayerProfile } from "@/lib/players";
 import { teamName } from "@/lib/teams";
@@ -37,7 +38,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const p = await getPlayerBySlug(slug);
   if (!p) notFound();
-  const { career, seasons, ranks, best, recent } = await getPlayerProfile(Number(p.player_id));
+  const { career, seasons, ranks, best, recent, progression } = await getPlayerProfile(Number(p.player_id));
   const reg = seasons.filter((s: any) => s.season_type === "Regular Season");
   const po = seasons.filter((s: any) => s.season_type === "Playoffs");
   const topRanks = ranks.filter((r: any) => Number(r.rank) <= 25);
@@ -92,6 +93,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ slug: s
               </div>
               <Link className="btn btn-o" href="/grades">Grade the last game →</Link>
             </div>
+          </section>
+        ) : null}
+
+        {progression.length >= 2 ? (
+          <section className="wrap sec">
+            <div className="sechead"><h2 className="h2">Career <span className="se" style={{ fontSize: "1.1em" }}>progression</span></h2><span className="k muted">Season by season as a Raptor · tap any card to chart it</span></div>
+            <Progression name={p.full_name} seasons={progression} />
           </section>
         ) : null}
 
