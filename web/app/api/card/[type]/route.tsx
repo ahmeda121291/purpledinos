@@ -3,14 +3,17 @@ import { ImageResponse } from "next/og";
 import { CARD_META, CARD_TYPES, CardType, getCard } from "@/lib/cards";
 import { fmt } from "@/lib/data";
 
-export const runtime = "edge";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+export const runtime = "nodejs";
 
 const W = 1200, H = 675;
 const GOLD = "#D9B878", INK = "#F3EEE6", MUTED = "#A8A29A", SOFT = "#CFC9BF", LILAC = "#B9A4F0", PURPLE = "#6B3FD4";
 const MONO = "JetBrains Mono", SERIF = "Instrument Serif", SANS = "Bricolage";
 
 const fonts = async () => {
-  const load = (f: string) => fetch(new URL(`./fonts/${f}`, import.meta.url)).then((r) => r.arrayBuffer());
+  const load = (f: string) => readFile(join(process.cwd(), "assets", "fonts", f));
   const [r4, r6, r8, se, mo] = await Promise.all([
     load("bricolage-grotesque-latin-400-normal.woff"), load("bricolage-grotesque-latin-600-normal.woff"),
     load("bricolage-grotesque-latin-800-normal.woff"), load("instrument-serif-latin-400-italic.woff"),
