@@ -61,13 +61,18 @@ async function raptorsMatcher(db: any) {
   const full = names.map((n) => n.toLowerCase());
   const last = names.map((n) => n.split(" ").slice(-1)[0]).filter((l) => l.length > 3);
   const loose = /raptors|\b(raps|we the north|wethenorth|darko|scotiabank arena|jurassic park|905)\b/i;
-  return (t: string) => {
+  // The same idea as an X search clause, so off-topic posts are never read (or billed).
+  const terms = ["raptors", "#raptors", "raps", "#WeTheNorth", "\"we the north\"", "darko", "905", "url:raptors",
+    ...[...new Set(last.filter((l) => !COMMON.has(l)))].map((l) => (/[^A-Za-z]/.test(l) ? `"${l}"` : l))];
+  const clause = `(${terms.join(" OR ")})`;
+  const test = (t: string) => {
     if (loose.test(t)) return true;
     const lo = t.toLowerCase();
     if (full.some((n) => lo.includes(n))) return true;
     // Last names alone: must be capitalised, and common words need a full-name or team hit (handled above).
     return last.some((l) => !COMMON.has(l) && new RegExp(`\\b${l}\\b`).test(t));
   };
+  return { test, clause };
 }
 
 /* ---------- ingest ---------- */
@@ -98,12 +103,14 @@ export async function ingestFeed(db: any) {
   const handles = ((accts as any[]) ?? []).map((a) => a.handle);
   const byId = new Map(((accts as any[]) ?? []).map((a) => [a.user_id, a.handle]));
   if (!handles.length) { out.push("feed: no accounts"); return out; }
-  const isRaps = await raptorsMatcher(db);
+  const { test: isRaps, clause } = await raptorsMatcher(db);
 
-  // Two queries keep each under X's query length limit.
-  const groups = [handles.slice(0, Math.ceil(handles.length / 2)), handles.slice(Math.ceil(handles.length / 2))].filter((g) => g.length);
+  // Small groups keep each query (handles + Raptors terms) under X's 512-character limit.
+  const per = Math.max(2, Math.floor((480 - clause.length) / 22));
+  const groups: string[][] = [];
+  for (let i = 0; i < handles.length; i += per) groups.push(handles.slice(i, i + per));
   for (let gi = 0; gi < groups.length && remaining > 0; gi++) {
-    const q = `(${groups[gi].map((h) => `from:${h}`).join(" OR ")}) -is:retweet -is:reply`;
+    const q = `(${groups[gi].map((h) => `from:${h}`).join(" OR ")}) ${clause} -is:retweet -is:reply`;
     const sinceKey = `feed_since_${gi}`;
     const since = await setting(db, sinceKey, "");
     const params: Record<string, string> = {
@@ -138,13 +145,16 @@ export async function ingestFeed(db: any) {
         raptors: isRaps(`${raw} ${linkText}`), metrics_at: new Date().toISOString(),
       };
     });
-    if (rows.length) {
-      const { error } = await db.from("feed_posts").upsert(rows, { onConflict: "id" });
+    const keep = rows.filter((r) => r.raptors); // Raptors, Raptors, Raptors
+    if (keep.length) {
+      const { error } = await db.from("feed_posts").upsert(keep, { onConflict: "id" });
       if (error) throw new Error(`feed upsert: ${error.message}`);
+    }
+    if (rows.length) {
       const newest = body.meta?.newest_id ?? rows[0].id;
       await setSetting(db, sinceKey, newest);
     }
-    out.push(`feed group ${gi + 1}: ${rows.length} new posts`);
+    out.push(`feed group ${gi + 1}: ${keep.length} Raptors posts (${rows.length} read)`);
   }
   return out;
 }
